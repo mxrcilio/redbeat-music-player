@@ -1,0 +1,7 @@
+{
+  "name": "RedBeat Music Player",
+  "description": "A high-performance, Spotify-inspired music streaming interface with a bold Black, Red, and White aesthetic. Built for self-hosted music libraries.",
+  "requestFramePermissions": [
+    "microphone"
+  ]
+}

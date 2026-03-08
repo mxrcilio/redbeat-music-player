@@ -1,0 +1,2583 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>RedBeat | Sua Música, Suas Regras</title>
+    <!-- Google Fonts -->
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;800&display=swap" rel="stylesheet">
+    <!-- Lucide Icons -->
+    <script src="https://unpkg.com/lucide@latest"></script>
+    <style>
+        :root {
+            --bg-deep: #000000;
+            --bg-surface: #0a0a0a;
+            --bg-card: #121212;
+            --bg-card-hover: #1f1f1f;
+            --primary: #ff0000;
+            --primary-hover: #cc0000;
+            --text-main: #ffffff;
+            --text-dim: #b3b3b3;
+            --border: #282828;
+            --transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+            --queue-width: 350px;
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            font-family: 'Inter', sans-serif;
+            -webkit-tap-highlight-color: transparent;
+        }
+
+        body {
+            background-color: var(--bg-deep);
+            color: var(--text-main);
+            overflow: hidden;
+            height: 100vh;
+            display: flex;
+            flex-direction: column;
+        }
+
+        .app-container {
+            display: grid;
+            grid-template-columns: 240px 1fr;
+            grid-template-rows: 1fr 90px;
+            height: 100vh;
+            width: 100vw;
+            transition: grid-template-columns 0.3s ease;
+        }
+
+        .app-container.queue-open {
+            grid-template-columns: 240px 1fr var(--queue-width);
+        }
+
+        aside {
+            background-color: var(--bg-deep);
+            padding: 24px 12px;
+            display: flex;
+            flex-direction: column;
+            gap: 24px;
+            z-index: 1001;
+            border-right: 1px solid var(--border);
+            overflow-y: auto;
+            transition: transform 0.3s ease;
+        }
+
+        .logo {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            color: var(--primary);
+            font-weight: 800;
+            font-size: 1.5rem;
+            letter-spacing: -1.5px;
+            padding: 0 12px;
+            cursor: pointer;
+        }
+
+        .nav-group {
+            display: flex;
+            flex-direction: column;
+            gap: 4px;
+        }
+
+        .nav-item {
+            display: flex;
+            align-items: center;
+            gap: 16px;
+            padding: 12px 16px;
+            border-radius: 4px;
+            color: var(--text-dim);
+            text-decoration: none;
+            font-weight: 700;
+            font-size: 0.9rem;
+            transition: var(--transition);
+            cursor: pointer;
+        }
+
+        .nav-item:hover, .nav-item.active {
+            color: var(--text-main);
+        }
+
+        .nav-item.active i {
+            color: var(--primary);
+        }
+
+        .library-section {
+            background: var(--bg-card);
+            border-radius: 8px;
+            flex-grow: 1;
+            padding: 12px;
+            overflow-y: auto;
+            margin-top: 12px;
+        }
+
+        main {
+            background: linear-gradient(180deg, #1a0000 0%, #000000 35%);
+            overflow-y: auto;
+            position: relative;
+            padding: 0 32px 32px;
+            scrollbar-gutter: stable;
+            min-height: 0; /* Fix scrolling in grid */
+        }
+
+        header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            position: sticky;
+            top: 0;
+            background: rgba(0,0,0,0.8);
+            backdrop-filter: blur(20px);
+            z-index: 100;
+            padding: 16px 0;
+            margin: 0 -32px 24px -32px;
+            padding-left: 32px;
+            padding-right: 32px;
+        }
+
+        .nav-controls {
+            display: flex;
+            align-items: center;
+            gap: 16px;
+            flex: 1;
+        }
+
+        .circle-btn {
+            width: 32px;
+            height: 32px;
+            border-radius: 50%;
+            background: rgba(255,255,255,0.1);
+            border: none;
+            color: white;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            transition: var(--transition);
+        }
+
+        .circle-btn:hover {
+            background: rgba(255,255,255,0.2);
+        }
+
+        .mobile-menu-btn { display: none; }
+
+        .search-container {
+            max-width: 364px;
+            width: 100%;
+            position: relative;
+            margin-left: 12px;
+        }
+
+        .search-bar {
+            background: #242424;
+            border: 1px solid transparent;
+            padding: 10px 12px 10px 48px;
+            border-radius: 500px;
+            display: flex;
+            align-items: center;
+            width: 100%;
+            transition: var(--transition);
+        }
+
+        .search-bar:focus-within {
+            border-color: var(--primary);
+            background: #2a2a2a;
+        }
+
+        .search-bar input {
+            background: transparent;
+            border: none;
+            color: white;
+            outline: none;
+            width: 100%;
+            font-size: 0.85rem;
+        }
+
+        .search-icon {
+            position: absolute;
+            left: 16px;
+            top: 50%;
+            transform: translateY(-50%);
+            pointer-events: none;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        /* Search Preview Dropdown Styles */
+        .search-preview-dropdown {
+            position: absolute;
+            top: 100%;
+            left: 0;
+            right: 0;
+            background: #181818;
+            border-radius: 8px;
+            margin-top: 8px;
+            box-shadow: 0 16px 48px rgba(0,0,0,0.9);
+            z-index: 2000;
+            display: none;
+            max-height: 480px;
+            overflow-y: auto;
+            border: 1px solid #333;
+            animation: fadeIn 0.2s ease;
+        }
+
+        .search-preview-section {
+            padding: 12px 0;
+            border-bottom: 1px solid #282828;
+        }
+
+        .search-preview-section:last-child {
+            border-bottom: none;
+        }
+
+        .search-preview-section h4 {
+            font-size: 0.7rem;
+            color: var(--text-dim);
+            text-transform: uppercase;
+            letter-spacing: 1.2px;
+            margin-bottom: 8px;
+            padding: 0 16px;
+        }
+
+        .preview-item {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            padding: 8px 16px;
+            cursor: pointer;
+            transition: var(--transition);
+        }
+
+        .preview-item:hover {
+            background: #282828;
+        }
+
+        .preview-thumb {
+            width: 40px;
+            height: 40px;
+            border-radius: 4px;
+            object-fit: cover;
+            box-shadow: 0 4px 8px rgba(0,0,0,0.3);
+        }
+
+        .preview-thumb.artist {
+            border-radius: 50%;
+        }
+
+        .preview-info {
+            flex: 1;
+            min-width: 0;
+        }
+
+        .preview-title {
+            font-size: 0.85rem;
+            font-weight: 700;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            color: white;
+        }
+
+        .preview-subtitle {
+            font-size: 0.75rem;
+            color: var(--text-dim);
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+
+        .view-section {
+            display: none;
+            animation: fadeIn 0.4s ease forwards;
+        }
+
+        .view-section.active { display: block; }
+
+        .shelf { margin-bottom: 40px; }
+        .shelf-title { font-size: 1.5rem; font-weight: 800; margin-bottom: 20px; }
+        .grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(170px, 1fr)); gap: 24px; }
+
+        .card {
+            background: var(--bg-card);
+            padding: 16px;
+            border-radius: 8px;
+            transition: var(--transition);
+            cursor: pointer;
+            position: relative;
+            border: 1px solid transparent;
+        }
+
+        .card:hover { background: var(--bg-card-hover); border-color: #333; }
+        .card-img { 
+            width: 100%; 
+            aspect-ratio: 1 / 1; 
+            border-radius: 4px; 
+            object-fit: cover; 
+            object-position: center;
+            margin-bottom: 16px; 
+            box-shadow: 0 8px 24px rgba(0,0,0,0.5); 
+            display: block;
+        }
+        .artist-img { border-radius: 50% !important; }
+        .card-title { font-size: 0.95rem; font-weight: 700; margin-bottom: 4px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 100%; }
+        .card-subtitle { font-size: 0.8rem; color: var(--text-dim); }
+
+        .album-art-fix {
+            object-fit: cover;
+            object-position: center;
+            aspect-ratio: 1 / 1;
+        }
+
+        .play-overlay {
+            position: absolute;
+            bottom: 85px;
+            right: 24px;
+            background: var(--primary);
+            width: 48px;
+            height: 48px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            opacity: 0;
+            transform: translateY(8px);
+            transition: var(--transition);
+            box-shadow: 0 8px 16px rgba(0,0,0,0.4);
+            color: white;
+        }
+
+        .card:hover .play-overlay { opacity: 1; transform: translateY(0); }
+
+        .hero {
+            display: flex;
+            gap: 32px;
+            padding: 40px 32px;
+            align-items: flex-end;
+            margin: 0 -32px 32px -32px;
+            background: linear-gradient(to bottom, rgba(255,0,0,0.2) 0%, transparent 100%);
+            transition: var(--transition);
+        }
+
+        .hero-img { 
+            width: clamp(160px, 20vw, 232px); 
+            aspect-ratio: 1 / 1; 
+            object-fit: cover;
+            object-position: center;
+            border-radius: 4px; 
+            box-shadow: 0 8px 40px rgba(0,0,0,0.6); 
+            transition: var(--transition);
+            flex-shrink: 0;
+            display: block;
+        }
+        
+        .hero-info { flex: 1; min-width: 0; }
+        .hero-info h1 { 
+            font-size: clamp(1.8rem, 5vw, 4.5rem); 
+            font-weight: 900; 
+            letter-spacing: -2px; 
+            margin: 8px 0; 
+            line-height: 1.1;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+
+        .rename-input-container {
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+            margin: 12px 0;
+        }
+
+        .rename-field {
+            background: rgba(255, 255, 255, 0.1);
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            padding: 16px;
+            border-radius: 8px;
+            color: white;
+            font-size: clamp(1.5rem, 3vw, 2.5rem);
+            font-weight: 800;
+            outline: none;
+            width: 100%;
+            transition: var(--transition);
+        }
+
+        .rename-field:focus {
+            border-color: var(--primary);
+            background: rgba(255, 255, 255, 0.15);
+        }
+
+        .rename-actions {
+            display: flex;
+            gap: 12px;
+        }
+
+        .hero-actions { display: flex; gap: 12px; margin-top: 16px; flex-wrap: wrap; }
+        
+        .play-album-btn {
+            background: var(--primary);
+            color: white;
+            border: none;
+            padding: 14px 32px;
+            border-radius: 500px;
+            font-weight: 800;
+            font-size: 0.9rem;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 10px;
+            cursor: pointer;
+            transition: var(--transition);
+            text-transform: uppercase;
+            letter-spacing: 1.2px;
+            width: fit-content;
+            box-shadow: 0 4px 15px rgba(255, 0, 0, 0.3);
+        }
+
+        .play-album-btn:hover {
+            transform: scale(1.05);
+            background: var(--primary-hover);
+            box-shadow: 0 6px 20px rgba(255, 0, 0, 0.4);
+        }
+
+        .songs-table { width: 100%; border-collapse: collapse; }
+        .songs-table th { text-align: left; padding: 12px 16px; border-bottom: 1px solid var(--border); color: var(--text-dim); font-size: 0.75rem; text-transform: uppercase; letter-spacing: 1px; }
+        .song-row { cursor: pointer; transition: var(--transition); border-radius: 4px; }
+        .song-row:hover { background: rgba(255,255,255,0.1); }
+        .song-row.active { color: var(--primary); }
+        .song-row td { padding: 12px 16px; font-size: 0.95rem; }
+        
+        .song-title-text {
+            color: var(--text-main);
+            font-weight: 500;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+
+        /* Auth Pages Styling */
+        .auth-container {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            min-height: calc(100vh - 200px);
+            padding: 40px 20px;
+        }
+
+        .auth-card {
+            background: #000;
+            width: 100%;
+            max-width: 450px;
+            padding: 48px;
+            border-radius: 8px;
+            display: flex;
+            flex-direction: column;
+            gap: 24px;
+        }
+
+        .auth-header {
+            text-align: center;
+            margin-bottom: 12px;
+        }
+
+        .auth-header h1 {
+            font-size: 2rem;
+            font-weight: 800;
+            letter-spacing: -1px;
+            margin-top: 16px;
+        }
+
+        .auth-form {
+            display: flex;
+            flex-direction: column;
+            gap: 16px;
+        }
+
+        .input-group {
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+            width: 100%;
+        }
+
+        .input-group label { font-size: 0.85rem; font-weight: 700; }
+
+        .auth-input {
+            background: #121212;
+            border: 1px solid #727272;
+            border-radius: 4px;
+            padding: 12px 16px;
+            color: white;
+            font-size: 1rem;
+            transition: var(--transition);
+            width: 100%;
+            box-sizing: border-box;
+        }
+
+        .auth-input:focus { border-color: white; outline: none; }
+
+        .auth-btn {
+            background: var(--primary);
+            color: white;
+            border: none;
+            padding: 14px;
+            border-radius: 500px;
+            font-weight: 800;
+            font-size: 1rem;
+            cursor: pointer;
+            transition: var(--transition);
+            margin-top: 12px;
+        }
+
+        .auth-btn:hover { transform: scale(1.04); background: var(--primary-hover); }
+
+        .auth-footer {
+            text-align: center;
+            margin-top: 12px;
+            padding-top: 24px;
+            border-top: 1px solid #282828;
+            color: var(--text-dim);
+            font-size: 0.9rem;
+        }
+
+        .auth-link { color: white; font-weight: 700; text-decoration: underline; cursor: pointer; margin-left: 4px; }
+        .auth-link:hover { color: var(--primary); }
+
+        /* Lyrics Feature Styles */
+        #view-lyrics {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            z-index: 2001;
+            background: var(--bg-deep);
+            overflow-y: auto;
+            padding: 60px 24px 120px;
+            display: none;
+            transition: var(--transition);
+        }
+
+        #view-lyrics.active { display: block; }
+
+        .lyrics-background {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            z-index: -1;
+            background: linear-gradient(180deg, rgba(120, 0, 0, 0.8) 0%, rgba(0, 0, 0, 1) 100%);
+            filter: blur(80px);
+            opacity: 0.6;
+        }
+
+        .lyrics-header {
+            position: sticky;
+            top: 0;
+            display: flex;
+            justify-content: flex-end;
+            margin-bottom: 24px;
+            z-index: 10;
+        }
+
+        .lyrics-container {
+            max-width: 800px;
+            margin: 0 auto;
+            display: flex;
+            flex-direction: column;
+            gap: 32px;
+        }
+
+        .lyric-line {
+            font-size: clamp(1.5rem, 4vw, 3rem);
+            font-weight: 800;
+            line-height: 1.2;
+            color: rgba(255, 255, 255, 0.3);
+            transition: var(--transition);
+            cursor: default;
+        }
+
+        .lyric-line.active { color: white; transform: scale(1.02); }
+        .lyric-line:hover { color: rgba(255, 255, 255, 0.6); }
+
+        .lyrics-footer {
+            position: fixed;
+            bottom: 40px;
+            left: 50%;
+            transform: translateX(-50%);
+            display: flex;
+            gap: 16px;
+            z-index: 10;
+        }
+
+        .translation-toggle {
+            background: rgba(255, 255, 255, 0.1);
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            color: white;
+            padding: 8px 20px;
+            border-radius: 500px;
+            font-size: 0.8rem;
+            font-weight: 700;
+            cursor: pointer;
+            transition: var(--transition);
+        }
+
+        .translation-toggle.active { background: white; color: black; }
+
+        /* Queue Sidebar Feature Styles */
+        #queue-sidebar {
+            background: var(--bg-deep);
+            border-left: 1px solid var(--border);
+            display: flex;
+            flex-direction: column;
+            overflow-y: auto;
+            padding: 24px;
+            z-index: 1000;
+            animation: slideInRight 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+
+        @keyframes slideInRight {
+            from { transform: translateX(100%); }
+            to { transform: translateX(0); }
+        }
+
+        .queue-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 24px;
+        }
+
+        .queue-header h2 { font-size: 1.2rem; font-weight: 800; }
+        .queue-section { margin-bottom: 32px; }
+        .queue-section-title { font-size: 0.9rem; font-weight: 700; color: var(--text-dim); margin-bottom: 16px; text-transform: uppercase; letter-spacing: 1px; }
+
+        .queue-item {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            padding: 8px;
+            border-radius: 4px;
+            transition: var(--transition);
+            cursor: pointer;
+        }
+
+        .queue-item:hover { background: var(--bg-card-hover); }
+        .queue-item.active { color: var(--primary); }
+        .queue-item-img { width: 48px; height: 48px; border-radius: 4px; object-fit: cover; }
+        .queue-item-info { flex: 1; min-width: 0; }
+        .queue-item-title { font-size: 0.9rem; font-weight: 700; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+        .queue-item-artist { font-size: 0.8rem; color: var(--text-dim); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+
+        /* Modal Styles */
+        .modal-overlay {
+            position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.85); backdrop-filter: blur(8px);
+            z-index: 2000; display: none; align-items: center; justify-content: center; padding: 20px;
+        }
+        .modal-content {
+            background: var(--bg-card); width: 100%; max-width: 400px; border-radius: 12px; padding: 32px; border: 1px solid var(--border); animation: fadeIn 0.3s ease;
+        }
+        .modal-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 24px; }
+        .playlist-list { display: flex; flex-direction: column; gap: 10px; max-height: 300px; overflow-y: auto; margin-bottom: 24px; }
+        .playlist-option { padding: 12px 16px; background: #242424; border-radius: 6px; cursor: pointer; transition: var(--transition); display: flex; align-items: center; gap: 12px; font-weight: 600; }
+        .playlist-option:hover { background: #333; }
+        .new-playlist-input { display: flex; gap: 10px; margin-top: 10px; }
+        .new-playlist-input input { flex: 1; padding: 10px 14px; background: #242424; border: 1px solid var(--border); border-radius: 4px; color: white; outline: none; }
+        .add-btn { padding: 10px 16px; background: var(--primary); color: white; border: none; border-radius: 4px; font-weight: 700; cursor: pointer; }
+
+        /* Confirm Modal specific buttons */
+        .confirm-actions {
+            display: flex;
+            gap: 12px;
+            margin-top: 24px;
+        }
+        .confirm-btn-primary {
+            flex: 1;
+            background: var(--primary);
+            color: white;
+            border: none;
+            padding: 12px;
+            border-radius: 4px;
+            font-weight: 800;
+            cursor: pointer;
+            transition: var(--transition);
+        }
+        .confirm-btn-secondary {
+            flex: 1;
+            background: #282828;
+            color: white;
+            border: none;
+            padding: 12px;
+            border-radius: 4px;
+            font-weight: 800;
+            cursor: pointer;
+            transition: var(--transition);
+        }
+
+        /* Player Bar Styles */
+        .player-bar {
+            grid-column: 1 / -1;
+            background: #000;
+            border-top: 1px solid var(--border);
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 0 16px;
+            z-index: 1000;
+            position: relative;
+        }
+        .current-track { display: flex; align-items: center; gap: 14px; width: 300px; }
+        .track-clickable-info { display: flex; align-items: center; gap: 14px; cursor: pointer; border-radius: 4px; transition: var(--transition); }
+        .track-clickable-info:hover { opacity: 0.8; }
+        .track-thumb { width: 56px; height: 56px; border-radius: 4px; object-fit: cover; }
+        
+        .track-info { display: flex; flex-direction: column; overflow: hidden; }
+        .track-info h4 { font-size: 0.85rem; margin-bottom: 2px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 180px; }
+        .player-metadata-links { display: flex; align-items: center; gap: 6px; font-size: 0.7rem; color: var(--text-dim); }
+        .player-link { transition: var(--transition); cursor: pointer; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 120px; }
+        .player-link:hover { color: #fff !important; text-decoration: underline; }
+
+        .player-controls { flex: 1; max-width: 600px; display: flex; flex-direction: column; align-items: center; gap: 8px; }
+        .control-btns { display: flex; align-items: center; gap: 24px; }
+        .main-play-btn { background: none; color: white; width: 42px; height: 42px; border: none; display: flex; align-items: center; justify-content: center; transition: var(--transition); cursor: pointer; }
+        .main-play-btn:hover { transform: scale(1.15); color: var(--primary); }
+        .btn-icon { background: none; border: none; color: var(--text-dim); cursor: pointer; transition: var(--transition); display: flex; align-items: center; justify-content: center; padding: 4px; }
+        .btn-icon:hover { color: var(--text-main); }
+        .btn-icon.liked { color: var(--primary) !important; }
+
+        .progress-bar-container { display: flex; align-items: center; gap: 12px; width: 100%; }
+        .slider { flex: 1; height: 4px; background: #4d4d4d; border-radius: 2px; cursor: pointer; position: relative; touch-action: none; }
+        .slider-fill { height: 100%; background: white; border-radius: 2px; width: 0%; transition: width 0.1s linear; pointer-events: none; }
+        .slider:hover .slider-fill { background: var(--primary); }
+            .time-label { font-size: 0.7rem; color: var(--text-dim); min-width: 32px; }
+
+        /* Volume slider enhancements */
+        #volume-slider {
+            height: 6px !important;
+            background: rgba(255, 255, 255, 0.2) !important;
+            border-radius: 3px !important;
+            transition: height 0.2s ease, background 0.2s ease;
+        }
+        #volume-slider:hover {
+            height: 8px !important;
+            background: rgba(255, 255, 255, 0.3) !important;
+        }
+        #volume-slider:active {
+            height: 8px !important;
+            background: rgba(255, 0, 0, 0.2) !important;
+        }
+
+        .extra-controls { width: 300px; display: flex; justify-content: flex-end; align-items: center; gap: 16px; }
+
+        .extra-controls { width: 300px; display: flex; justify-content: flex-end; align-items: center; gap: 16px; }
+        .control-btn-active { color: var(--primary) !important; }
+
+        /* Mobile Adjustments (Optimized UX) */
+        @media (max-width: 768px) {
+            /* Mobile Header Refactor */
+            header {
+                display: flex;
+                align-items: center;
+                gap: 8px;
+                padding: 12px 16px;
+                margin: 0 -16px 16px -16px;
+                position: sticky;
+                top: 0;
+                z-index: 100;
+            }
+
+            .nav-controls {
+                display: flex;
+                align-items: center;
+                gap: 8px;
+                flex: 1;
+                width: 100%;
+            }
+
+            .mobile-menu-btn, .circle-btn {
+                width: 36px;
+                height: 36px;
+                min-width: 36px;
+                display: flex;
+                align-items: center;
+                justify-content: center;
+            }
+
+            .search-container {
+                flex: 1;
+                margin-left: 0;
+                max-width: none;
+            }
+
+            .search-bar {
+                padding: 8px 12px 8px 36px;
+                width: 100%;
+            }
+
+            .search-icon {
+                left: 10px;
+            }
+
+            /* Mobile Hero Standardization */
+            .hero {
+                flex-direction: column;
+                align-items: center;
+                text-align: center;
+                gap: 16px;
+                padding-top: 20px;
+            }
+
+            .hero-img {
+                width: 100%;
+                max-width: 232px;
+                height: auto;
+                aspect-ratio: 1 / 1;
+                object-fit: cover;
+                object-position: center;
+                margin: 0 auto;
+                box-shadow: 0 8px 30px rgba(0,0,0,0.5);
+            }
+
+            .card-img {
+                aspect-ratio: 1 / 1;
+                object-fit: cover;
+            }
+
+            .hero-info {
+                align-items: center;
+                width: 100%;
+                display: flex;
+                flex-direction: column;
+            }
+
+            .hero-info h1 {
+                font-size: 1.5rem;
+                text-align: center;
+                line-height: 1.2;
+            }
+
+            .hero-actions {
+                justify-content: center;
+                width: 100%;
+            }
+
+            .app-container { grid-template-columns: 1fr; grid-template-rows: 1fr auto 60px; }
+            /* Mobile Queue Sidebar Overlay */
+            #queue-sidebar {
+                position: fixed;
+                top: 0;
+                right: 0;
+                bottom: 0; /* Full height */
+                width: 100%;
+                max-width: 100%;
+                z-index: 2002; /* Above everything */
+                border-left: none;
+                background: var(--bg-deep);
+                box-shadow: -10px 0 30px rgba(0,0,0,0.8);
+            }
+
+            .app-container.queue-open { grid-template-columns: 1fr; }
+            
+            aside { position: fixed; left: 0; top: 0; bottom: 0; width: 280px; transform: translateX(-100%); box-shadow: 20px 0 50px rgba(0,0,0,0.8); }
+            aside.open { transform: translateX(0); }
+            .mobile-menu-btn { display: flex; }
+            .nav-controls { gap: 8px; }
+            .grid { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; }
+            .card { padding: 12px; }
+            #view-home .grid > .card:nth-child(n+5) { display: none; }
+
+            /* Specific override for mobile buttons with higher specificity */
+            #main-scroller .view-section .play-album-btn {
+                padding: 8px 20px !important;
+                font-size: 0.75rem !important;
+                min-width: 120px !important;
+                height: auto !important;
+                width: auto !important;
+                letter-spacing: 0.8px !important;
+                gap: 8px !important;
+                box-shadow: 0 4px 12px rgba(255, 0, 0, 0.2) !important;
+            }
+
+            #main-scroller .view-section .play-album-btn i, 
+            #main-scroller .view-section .play-album-btn svg {
+                width: 16px !important;
+                height: 16px !important;
+            }
+
+            /* Full Responsive Mobile Player UI - 100% features visible */
+            .player-bar { 
+                grid-row: 2; 
+                position: sticky; 
+                bottom: 0; 
+                width: 100%; 
+                height: auto; 
+                padding: 0 16px 12px; 
+                margin: 0; 
+                border-radius: 0; 
+                background: #000;
+                border-top: 1px solid var(--border); 
+                display: flex;
+                flex-direction: column; 
+                gap: 8px;
+                box-shadow: 0 -8px 24px rgba(0,0,0,0.9);
+            }
+
+            /* 1. Progress Slider (Top) */
+            .player-controls .progress-bar-container { 
+                order: -3; 
+                width: calc(100% + 32px); 
+                margin-left: -16px; 
+                margin-right: -16px; 
+                padding: 0;
+            }
+            .player-controls .slider { height: 8px; border-radius: 0; }
+            .player-controls .time-label { display: none; } 
+
+            /* 2. Track Metadata & Like/Mute (Middle-Top) */
+            .current-track { 
+                order: -2; 
+                width: 100%; 
+                justify-content: space-between; 
+                padding-top: 8px;
+            }
+            .track-thumb { width: 44px; height: 44px; }
+            .track-info h4 { font-size: 0.85rem; max-width: 130px; }
+            .current-track .btn-icon { min-width: 44px; min-height: 44px; }
+
+            /* 3. Playback Row (Main Controls) */
+            .player-controls { 
+                order: -1;
+                width: 100%; 
+                max-width: none; 
+                flex: none; 
+                padding: 4px 0;
+            }
+            .player-controls .control-btns { 
+                width: 100%; 
+                justify-content: space-between; 
+            }
+            .player-controls .btn-icon { 
+                display: flex !important; 
+                min-width: 44px; 
+                min-height: 44px;
+                scale: 1.1;
+            }
+            .main-play-btn { 
+                scale: 1.2; 
+                background: var(--primary);
+                border-radius: 50%;
+                color: white;
+                box-shadow: 0 0 15px rgba(255,0,0,0.3);
+            }
+
+            /* 4. Utilities Row (Volume, Lyrics, Queue, Playlist) */
+            .extra-controls { 
+                order: 0;
+                width: 100%; 
+                display: flex !important; 
+                justify-content: space-between; 
+                align-items: center;
+                gap: 8px; 
+                margin-top: 0; 
+                padding-top: 8px; 
+                border-top: 1px solid rgba(255,255,255,0.05); 
+            }
+            .extra-controls .btn-icon { 
+                display: flex !important; 
+                min-width: 44px; 
+                min-height: 44px;
+                color: var(--text-dim);
+            }
+            /* Flex Volume Container on Mobile */
+            .extra-controls > div { 
+                flex: 1; 
+                max-width: 140px; 
+                display: flex !important; 
+                align-items: center; 
+                gap: 6px;
+            }
+            .extra-controls .slider { height: 8px; }
+
+            .mobile-nav { grid-row: 3; background: #000; display: flex; justify-content: space-around; align-items: center; border-top: 1px solid var(--border); z-index: 1002; }
+            .mobile-nav > div { color: var(--text-dim); padding: 10px; cursor: pointer; display: flex; flex-direction: column; align-items: center; gap: 4px; font-size: 0.65rem; flex: 1; }
+            .mobile-nav > div.active { color: var(--text-main); }
+            .mobile-nav > div.active i { color: var(--primary); }
+
+            /* Mini-player State */
+            .player-bar.minimized {
+                position: fixed;
+                bottom: 70px;
+                left: 12px;
+                right: 12px;
+                width: calc(100% - 24px);
+                border-radius: 12px;
+                background: rgba(18, 18, 18, 0.85);
+                backdrop-filter: blur(12px);
+                -webkit-backdrop-filter: blur(12px);
+                border: 1px solid rgba(255, 255, 255, 0.1);
+                padding: 8px 16px;
+                flex-direction: row;
+                align-items: center;
+                gap: 12px;
+                z-index: 1003;
+                transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+            }
+
+            .player-bar.minimized .player-controls {
+                order: 2;
+                width: auto;
+                padding: 0;
+            }
+
+            .player-bar.minimized .current-track {
+                order: 1;
+                flex: 1;
+                padding-top: 0;
+            }
+
+            .player-bar.minimized .track-thumb {
+                width: 40px;
+                height: 40px;
+            }
+
+            .player-bar.minimized .progress-bar-container,
+            .player-bar.minimized .extra-controls,
+            .player-bar.minimized #ctrl-prev,
+            .player-bar.minimized #ctrl-next,
+            .player-bar.minimized #ctrl-shuffle,
+            .player-bar.minimized #ctrl-repeat,
+            .player-bar.minimized #player-mute-btn,
+            .player-bar.minimized #player-like-btn {
+                display: none !important;
+            }
+
+            .player-bar.minimized .control-btns {
+                justify-content: flex-end;
+                width: auto;
+            }
+
+            .player-bar.minimized .main-play-btn {
+                scale: 1;
+                width: 36px;
+                height: 36px;
+                background: transparent;
+                box-shadow: none;
+            }
+        }
+
+        @media (max-width: 480px) {
+            .auth-card {
+                padding: 32px 24px;
+                max-width: 100%;
+            }
+            
+            .auth-container {
+                padding: 20px 16px;
+            }
+
+            .auth-header h1 {
+                font-size: 1.75rem;
+            }
+
+            main {
+                padding: 0 16px 32px !important;
+            }
+
+            header {
+                margin: 0 -16px 24px -16px;
+                padding-left: 16px;
+                padding-right: 16px;
+            }
+
+            .hero {
+                margin: 0 -16px 24px -16px;
+                padding: 32px 16px;
+            }
+            
+            .songs-table {
+                table-layout: fixed;
+            }
+            
+            .song-row td:nth-child(2) {
+                width: auto;
+                max-width: 0; /* Force text truncation in flex/table */
+            }
+        }
+
+        @media (min-width: 769px) { .mobile-nav { display: none; } }
+        @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
+    </style>
+<link rel="stylesheet" href="/index.css">
+</head>
+<body>
+
+    <div class="app-container" id="main-app-container">
+        <aside id="app-sidebar">
+            <div class="logo" onclick="switchView('home'); closeMobileMenu(); hideSearchPreview();">
+                <i data-lucide="music-4"></i>
+                <span>REDBEAT</span>
+            </div>
+            <nav class="nav-group">
+                <div class="nav-item active" id="nav-home-side" onclick="switchView('home'); closeMobileMenu(); hideSearchPreview();">
+                    <i data-lucide="home"></i> Início
+                </div>
+                <div class="nav-item" id="nav-search-side" onclick="switchView('search'); closeMobileMenu(); hideSearchPreview();">
+                    <i data-lucide="search"></i> Buscar
+                </div>
+            </nav>
+            <div class="library-section">
+                <div class="nav-item" style="font-size: 0.8rem; letter-spacing: 0.5px; opacity: 0.6; text-transform: uppercase;">Sua Biblioteca</div>
+                <div class="nav-group" style="margin-top: 12px;" id="sidebar-playlists">
+                    <div class="nav-item" id="nav-liked-side" onclick="switchView('liked'); closeMobileMenu(); hideSearchPreview();">
+                        <i data-lucide="heart" style="color: red;"></i> Músicas Curtidas
+                    </div>
+                </div>
+            </div>
+        </aside>
+
+        <main id="main-scroller">
+            <header>
+                <div class="nav-controls">
+                    <button class="circle-btn mobile-menu-btn" onclick="toggleMobileMenu()"><i data-lucide="menu"></i></button>
+                    <button class="circle-btn" onclick="goBack()"><i data-lucide="chevron-left" size="20"></i></button>
+                    <button class="circle-btn"><i data-lucide="chevron-right" size="20"></i></button>
+                    <div class="search-container">
+                        <i data-lucide="search" size="20" color="#a0a0a0" class="search-icon"></i>
+                        <div class="search-bar">
+                            <input type="text" placeholder="O que você quer ouvir?" id="search-input" autocomplete="off">
+                        </div>
+                        <div id="search-preview" class="search-preview-dropdown"></div>
+                    </div>
+                </div>
+                <div class="user-profile">
+                    <button class="circle-btn" style="width: 36px; height: 36px; background: #282828;" onclick="switchView('login'); hideSearchPreview();"><i data-lucide="user" size="18"></i></button>
+                </div>
+            </header>
+
+            <div id="view-home" class="view-section active">
+                <section class="shelf">
+                    <h2 class="shelf-title">Artistas recomendados</h2>
+                    <div class="grid" id="home-artists-grid"></div>
+                </section>
+                <section class="shelf">
+                    <h2 class="shelf-title">Álbuns Populares</h2>
+                    <div class="grid" id="home-albums-grid"></div>
+                </section>
+            </div>
+
+            <div id="view-search" class="view-section">
+                <div id="search-content">
+                    <div id="search-results-area"></div>
+                    <div id="search-default-area">
+                        <h2 class="shelf-title">Navegar por tudo</h2>
+                        <div class="grid" id="categories-grid"></div>
+                    </div>
+                </div>
+            </div>
+
+            <div id="view-album" class="view-section">
+                <div id="album-container"></div>
+            </div>
+
+            <div id="view-artist" class="view-section">
+                <div id="artist-container"></div>
+            </div>
+
+            <div id="view-liked" class="view-section">
+                <div id="liked-songs-container"></div>
+            </div>
+
+            <div id="view-playlist" class="view-section">
+                <div id="playlist-view-container"></div>
+            </div>
+
+            <div id="view-login" class="view-section">
+                <div class="auth-container">
+                    <div class="auth-card">
+                        <div class="auth-header">
+                            <div class="logo" style="justify-content: center; padding: 0;">
+                                <i data-lucide="music-4" size="48"></i>
+                                <span style="font-size: 2rem;">REDBEAT</span>
+                            </div>
+                            <h1>Para continuar, faça login.</h1>
+                        </div>
+                        <div class="auth-form">
+                            <div class="input-group">
+                                <label>Endereço de e-mail ou nome de usuário</label>
+                                <input type="text" class="auth-input" placeholder="E-mail ou nome de usuário">
+                            </div>
+                            <div class="input-group">
+                                <label>Senha</label>
+                                <input type="password" class="auth-input" placeholder="Senha">
+                            </div>
+                            <button class="auth-btn" onclick="switchView('home')">Entrar</button>
+                        </div>
+                        <div class="auth-footer">
+                            Não tem uma conta? <span class="auth-link" onclick="switchView('register')">Inscrever-se no RedBeat</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div id="view-register" class="view-section">
+                <div class="auth-container">
+                    <div class="auth-card">
+                        <div class="auth-header">
+                            <div class="logo" style="justify-content: center; padding: 0;">
+                                <i data-lucide="music-4" size="48"></i>
+                                <span style="font-size: 2rem;">REDBEAT</span>
+                            </div>
+                            <h1>Inscreva-se grátis e comece a ouvir.</h1>
+                        </div>
+                        <div class="auth-form">
+                            <div class="input-group">
+                                <label>Qual é o seu e-mail?</label>
+                                <input type="email" class="auth-input" placeholder="E-mail">
+                            </div>
+                            <div class="input-group">
+                                <label>Crie uma senha</label>
+                                <input type="password" class="auth-input" placeholder="Senha">
+                            </div>
+                            <div class="input-group">
+                                <label>Como devemos chamar você?</label>
+                                <input type="text" class="auth-input" placeholder="Nome de usuário">
+                            </div>
+                            <button class="auth-btn" onclick="switchView('home')">Inscrever-se</button>
+                        </div>
+                        <div class="auth-footer">
+                            Já tem uma conta? <span class="auth-link" onclick="switchView('login')">Faça login</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <div id="view-lyrics" class="view-section">
+                <div class="lyrics-background" id="lyrics-bg"></div>
+                <div class="lyrics-header">
+                    <button class="circle-btn" onclick="closeLyrics()" style="width: 44px; height: 44px; background: rgba(0,0,0,0.5);">
+                        <i data-lucide="x" size="24"></i>
+                    </button>
+                </div>
+                <div class="lyrics-container" id="lyrics-list">
+                    <!-- Lyrics populated via JS -->
+                </div>
+                <div class="lyrics-footer">
+                    <button class="translation-toggle" id="btn-translate" onclick="toggleTranslation()">
+                        Traduzir (PT-BR)
+                    </button>
+                </div>
+            </div>
+        </main>
+
+        <!-- Queue Sidebar -->
+        <aside id="queue-sidebar" style="display: none;">
+            <div class="queue-header">
+                <h2>Fila</h2>
+                <button class="btn-icon" onclick="toggleQueue(event)"><i data-lucide="x" size="20"></i></button>
+            </div>
+            
+            <div class="queue-section">
+                <p class="queue-section-title">Tocando agora</p>
+                <div id="queue-now-playing">
+                    <!-- Current track metadata -->
+                </div>
+            </div>
+
+            <div class="queue-section">
+                <p class="queue-section-title">Próximo na fila</p>
+                <div id="queue-next-up">
+                    <!-- Next tracks list -->
+                </div>
+            </div>
+        </aside>
+
+        <footer class="player-bar">
+            <div class="current-track">
+                <div class="track-clickable-info" onclick="navigateToCurrentAlbum()">
+                    <img src="https://picsum.photos/seed/placeholder/100" class="track-thumb" id="p-img">
+                    <div class="track-info">
+                        <h4 id="p-title" class="player-link">Selecione uma música</h4>
+                        <div class="player-metadata-links">
+                            <span id="p-artist" class="player-link">Artista</span>
+                            <span class="player-separator">•</span>
+                            <span id="p-album" class="player-link">Álbum</span>
+                        </div>
+                    </div>
+                </div>
+                <div style="display: flex; align-items: center; gap: 4px;">
+                    <button class="btn-icon" id="player-mute-btn" onclick="toggleMute()"><i data-lucide="volume-2" size="18"></i></button>
+                    <button class="btn-icon" id="player-like-btn" onclick="toggleLike(state.currentTrack?.id, event)"><i data-lucide="heart" size="18"></i></button>
+                </div>
+            </div>
+
+            <div class="player-controls">
+                <div class="progress-bar-container">
+                    <span class="time-label" id="time-cur">0:00</span>
+                    <div class="slider" id="progress-slider">
+                        <div class="slider-fill" id="progress-fill"></div>
+                    </div>
+                    <span class="time-label" id="time-dur">0:00</span>
+                </div>
+                <div class="control-btns">
+                    <button class="btn-icon" id="ctrl-shuffle"><i data-lucide="shuffle" size="18"></i></button>
+                    <button class="btn-icon" id="ctrl-prev"><i data-lucide="skip-back" size="20" fill="currentColor"></i></button>
+                    <button class="main-play-btn" id="ctrl-play"><i data-lucide="play" fill="currentColor"></i></button>
+                    <button class="btn-icon" id="ctrl-next"><i data-lucide="skip-forward" size="20" fill="currentColor"></i></button>
+                    <button class="btn-icon" id="ctrl-repeat"><i data-lucide="repeat" size="18"></i></button>
+                </div>
+            </div>
+
+            <div class="extra-controls">
+                <button class="btn-icon" onclick="openLyrics()"><i data-lucide="mic-2" size="16"></i></button>
+                <button class="btn-icon" onclick="toggleQueue(event)"><i data-lucide="list-music" size="16"></i></button>
+                <button class="btn-icon" id="player-playlist-btn" onclick="openPlaylistModal(state.currentTrack?.id)"><i data-lucide="list-plus" size="16"></i></button>
+                <div style="display: flex; align-items: center; gap: 12px; flex: 0 0 180px;">
+                    <div class="slider" id="volume-slider" style="margin: 0; flex: 1;">
+                        <div class="slider-fill" id="volume-fill" style="width: 80%; height: 100%;"></div>
+                    </div>
+                </div>
+            </div>
+        </footer>
+
+        <nav class="mobile-nav">
+            <div id="mob-home" class="active" onclick="switchView('home')"><i data-lucide="home"></i>Início</div>
+            <div id="mob-search" onclick="switchView('search')"><i data-lucide="search"></i>Buscar</div>
+            <div id="mob-liked" onclick="switchView('liked')"><i data-lucide="heart"></i>Curtidas</div>
+        </nav>
+    </div>
+
+    <div class="modal-overlay" id="playlist-modal" onclick="closePlaylistModal()">
+        <div class="modal-content" onclick="event.stopPropagation()">
+            <div class="modal-header">
+                <h3>Adicionar à Playlist</h3>
+                <button class="btn-icon" onclick="closePlaylistModal()"><i data-lucide="x"></i></button>
+            </div>
+            <div class="playlist-list" id="modal-playlist-list"></div>
+            <div style="border-top: 1px solid var(--border); padding-top: 20px;">
+                <p style="font-size: 0.8rem; color: var(--text-dim); margin-bottom: 12px;">Criar nova playlist</p>
+                <div class="new-playlist-input">
+                    <input type="text" id="new-playlist-name" placeholder="Nome da playlist">
+                    <button class="add-btn" onclick="createNewPlaylist()">Criar</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="modal-overlay" id="confirm-modal" onclick="hideConfirmModal()">
+        <div class="modal-content" onclick="event.stopPropagation()">
+            <div class="modal-header">
+                <h3 id="confirm-modal-title">Confirmar Ação</h3>
+                <button class="btn-icon" onclick="hideConfirmModal()"><i data-lucide="x"></i></button>
+            </div>
+            <p id="confirm-modal-body" style="color: var(--text-dim); line-height: 1.6; margin: 12px 0;"></p>
+            <div class="confirm-actions">
+                <button class="confirm-btn-secondary" onclick="hideConfirmModal()">Voltar</button>
+                <button class="confirm-btn-primary" id="confirm-modal-action-btn">Confirmar</button>
+            </div>
+        </div>
+    </div>
+
+    <audio id="audio-player"></audio>
+
+    <script>
+        const DATABASE = {
+            artists: [
+                { id: 1, name: "The Weeknd", img: "https://picsum.photos/seed/weekndp/400" },
+                { id: 10, name: "Justin Bieber", img: "https://picsum.photos/seed/bieber/400" },
+                { id: 15, name: "Travis Scott", img: "https://picsum.photos/seed/travis/400" },
+                { id: 6, name: "Drake", img: "https://picsum.photos/seed/drakep/400" },
+                { id: 30, name: "Post Malone", img: "https://picsum.photos/seed/postmalone/400" },
+                { id: 35, name: "Kanye West", img: "https://picsum.photos/seed/kanye/400" }
+            ],
+            albums: [
+                { id: 1, artistId: 1, title: "After Hours", cover: "https://picsum.photos/seed/album1/400", year: "2020" },
+                { id: 2, artistId: 1, title: "Starboy", cover: "https://picsum.photos/seed/starboy/400", year: "2016" },
+                { id: 3, artistId: 1, title: "Beauty Behind the Madness", cover: "https://picsum.photos/seed/bbtm/400", year: "2015" },
+                { id: 10, artistId: 10, title: "Journals", cover: "https://picsum.photos/seed/journals/400", year: "2013" },
+                { id: 11, artistId: 10, title: "Changes", cover: "https://picsum.photos/seed/changes/400", year: "2020" },
+                { id: 12, artistId: 10, title: "Justice", cover: "https://picsum.photos/seed/justice/400", year: "2021" },
+                { id: 13, artistId: 10, title: "Purpose", cover: "https://picsum.photos/seed/purpose/400", year: "2015" },
+                { id: 15, artistId: 15, title: "ASTROWORLD", cover: "https://picsum.photos/seed/astro/400", year: "2018" },
+                { id: 16, artistId: 15, title: "UTOPIA", cover: "https://picsum.photos/seed/utopia/400", year: "2023" },
+                { id: 20, artistId: 6, title: "Thank Me Later", cover: "https://picsum.photos/seed/thankmelater/400", year: "2010" },
+                { id: 6, artistId: 6, title: "Take Care", cover: "https://picsum.photos/seed/takecare/400", year: "2011" },
+                { id: 21, artistId: 6, title: "Nothing Was the Same", cover: "https://picsum.photos/seed/nwts/400", year: "2013" },
+                { id: 22, artistId: 6, title: "Certified Lover Boy", cover: "https://picsum.photos/seed/clb/400", year: "2021" },
+                { id: 30, artistId: 30, title: "Stoney", cover: "https://picsum.photos/seed/stoney/400", year: "2016" },
+                { id: 35, artistId: 35, title: "Graduation", cover: "https://picsum.photos/seed/graduation/400", year: "2007" },
+                { id: 36, artistId: 35, title: "808s & Heartbreak", cover: "https://picsum.photos/seed/808s/400", year: "2008" },
+                { id: 37, artistId: 35, title: "My Beautiful Dark Twisted Fantasy", cover: "https://picsum.photos/seed/mbdtf/400", year: "2010" },
+                { id: 38, artistId: 35, title: "Watch The Throne", cover: "https://picsum.photos/seed/wtt/400", year: "2011" }
+            ],
+            songs: [
+                /* After Hours - Full list */
+                { id: 1, albumId: 1, title: "Alone Again", artist: "The Weeknd", url: "/music/the weeknd/The Weeknd - After Hours (Album⁄Deluxe)/Alone Again (1080p_25fps_H264-128kbit_AAC).mp4", duration: "3:10" },
+                { id: 501, albumId: 1, title: "Too Late", artist: "The Weeknd", url: "/music/the weeknd/The Weeknd - After Hours (Album⁄Deluxe)/Too Late (1080p_25fps_H264-128kbit_AAC).mp4", duration: "3:59" },
+                { id: 502, albumId: 1, title: "Hardest To Love", artist: "The Weeknd", url: "/music/the weeknd/The Weeknd - After Hours (Album⁄Deluxe)/Hardest To Love (1080p_25fps_H264-128kbit_AAC).mp4", duration: "3:31" },
+                { id: 503, albumId: 1, title: "Scared To Live", artist: "The Weeknd", url: "/music/the weeknd/The Weeknd - After Hours (Album⁄Deluxe)/Scared To Live (1080p_25fps_H264-128kbit_AAC).mp4", duration: "3:11" },
+                { id: 504, albumId: 1, title: "Snowchild", artist: "The Weeknd", url: "/music/the weeknd/The Weeknd - After Hours (Album⁄Deluxe)/Snowchild (1080p_25fps_H264-128kbit_AAC).mp4", duration: "4:07" },
+                { id: 505, albumId: 1, title: "Escape from LA", artist: "The Weeknd", url: "/music/the weeknd/The Weeknd - After Hours (Album⁄Deluxe)/Escape From LA (1080p_25fps_H264-128kbit_AAC).mp4", duration: "5:55" },
+                { id: 506, albumId: 1, title: "Heartless", artist: "The Weeknd", url: "/music/the weeknd/The Weeknd - After Hours (Album⁄Deluxe)/Heartless (1080p_25fps_H264-128kbit_AAC).mp4", duration: "3:18" },
+                { id: 507, albumId: 1, title: "Faith", artist: "The Weeknd", url: "/music/the weeknd/The Weeknd - After Hours (Album⁄Deluxe)/Faith (1080p_25fps_H264-128kbit_AAC).mp4", duration: "4:43" },
+                { id: 508, albumId: 1, title: "Blinding Lights", artist: "The Weeknd", url: "/music/the weeknd/The Weeknd - After Hours (Album⁄Deluxe)/Blinding Lights (1080p_25fps_H264-128kbit_AAC).mp4", duration: "3:22" },
+                { id: 509, albumId: 1, title: "In Your Eyes", artist: "The Weeknd", url: "/music/the weeknd/The Weeknd - After Hours (Album⁄Deluxe)/In Your Eyes (1080p_25fps_H264-128kbit_AAC).mp4", duration: "3:57" },
+                { id: 510, albumId: 1, title: "Save Your Tears", artist: "The Weeknd", url: "/music/the weeknd/The Weeknd - After Hours (Album⁄Deluxe)/Save Your Tears (1080p_25fps_H264-128kbit_AAC).mp4", duration: "3:35" },
+                { id: 511, albumId: 1, title: "Repeat After Me", artist: "The Weeknd", url: "/music/the weeknd/The Weeknd - After Hours (Album⁄Deluxe)/Repeat After Me (Interlude) (1080p_25fps_H264-128kbit_AAC).mp4", duration: "3:15" },
+                { id: 512, albumId: 1, title: "After Hours", artist: "The Weeknd", url: "/music/the weeknd/The Weeknd - After Hours (Album⁄Deluxe)/After Hours (1080p_25fps_H264-128kbit_AAC).mp4", duration: "6:01" },
+                { id: 513, albumId: 1, title: "Until I Bleed Out", artist: "The Weeknd", url: "/music/the weeknd/The Weeknd - After Hours (Album⁄Deluxe)/Until I Bleed Out (1080p_25fps_H264-128kbit_AAC).mp4", duration: "3:12" },
+                
+                /* Starboy - Full list */
+                { id: 2, albumId: 2, title: "Starboy", artist: "The Weeknd", url: "/music/the weeknd/The Weeknd - Starboy Album/Starboy (1080p_25fps_H264-128kbit_AAC).mp4", duration: "3:50" },
+                { id: 601, albumId: 2, title: "Party Monster", artist: "The Weeknd", url: "/music/the weeknd/The Weeknd - Starboy Album/Party Monster (1080p_25fps_H264-128kbit_AAC).mp4", duration: "4:09" },
+                { id: 602, albumId: 2, title: "False Alarm", artist: "The Weeknd", url: "/music/the weeknd/The Weeknd - Starboy Album/False Alarm (1080p_25fps_H264-128kbit_AAC).mp4", duration: "3:40" },
+                { id: 603, albumId: 2, title: "Reminder", artist: "The Weeknd", url: "/music/the weeknd/The Weeknd - Starboy Album/Reminder (1080p_25fps_H264-128kbit_AAC).mp4", duration: "3:38" },
+                { id: 604, albumId: 2, title: "Rockin’", artist: "The Weeknd", url: "https://www.soundhelix.com/examples/mp3/SoundHelix-Song-5.mp3", duration: "3:52" },
+                { id: 605, albumId: 2, title: "Secrets", artist: "The Weeknd", url: "/music/the weeknd/The Weeknd - Starboy Album/Secrets (1080p_25fps_H264-128kbit_AAC).mp4", duration: "4:25" },
+                { id: 606, albumId: 2, title: "True Colors", artist: "The Weeknd", url: "/music/the weeknd/The Weeknd - Starboy Album/True Colors (1080p_25fps_H264-128kbit_AAC).mp4", duration: "3:26" },
+                { id: 607, albumId: 2, title: "Stargirl Interlude", artist: "The Weeknd", url: "/music/the weeknd/The Weeknd - Starboy Album/Stargirl Interlude (1080p_25fps_H264-128kbit_AAC).mp4", duration: "1:51" },
+                { id: 608, albumId: 2, title: "Sidewalks", artist: "The Weeknd", url: "/music/the weeknd/The Weeknd - Starboy Album/Sidewalks (1080p_25fps_H264-128kbit_AAC).mp4", duration: "3:51" },
+                { id: 609, albumId: 2, title: "Six Feet Under", artist: "The Weeknd", url: "/music/the weeknd/The Weeknd - Starboy Album/Six Feet Under (1080p_25fps_H264-128kbit_AAC).mp4", duration: "3:57" },
+                { id: 610, albumId: 2, title: "Love to Lay", artist: "The Weeknd", url: "/music/the weeknd/The Weeknd - Starboy Album/Love To Lay (1080p_25fps_H264-128kbit_AAC).mp4", duration: "3:43" },
+                { id: 611, albumId: 2, title: "A Lonely Night", artist: "The Weeknd", url: "/music/the weeknd/The Weeknd - Starboy Album/A Lonely Night (1080p_25fps_H264-128kbit_AAC).mp4", duration: "3:40" },
+                { id: 612, albumId: 2, title: "Attention", artist: "The Weeknd", url: "/music/the weeknd/The Weeknd - Starboy Album/Attention (1080p_25fps_H264-128kbit_AAC).mp4", duration: "3:17" },
+                { id: 613, albumId: 2, title: "Ordinary Life", artist: "The Weeknd", url: "/music/the weeknd/The Weeknd - Starboy Album/Ordinary Life (1080p_25fps_H264-128kbit_AAC).mp4", duration: "3:41" },
+                { id: 614, albumId: 2, title: "Nothing Without You", artist: "The Weeknd", url: "/music/the weeknd/The Weeknd - Starboy Album/Nothing Without You (1080p_25fps_H264-128kbit_AAC).mp4", duration: "3:18" },
+                { id: 615, albumId: 2, title: "All I Know", artist: "The Weeknd", url: "/music/the weeknd/The Weeknd - Starboy Album/All I Know (1080p_25fps_H264-128kbit_AAC).mp4", duration: "5:21" },
+                { id: 616, albumId: 2, title: "Die for You", artist: "The Weeknd", url: "/music/the weeknd/The Weeknd - Starboy Album/Die For You (1080p_25fps_H264-128kbit_AAC).mp4", duration: "4:20" },
+                { id: 617, albumId: 2, title: "I Feel It Coming", artist: "The Weeknd", url: "/music/the weeknd/The Weeknd - Starboy Album/I Feel It Coming (1080p_25fps_H264-128kbit_AAC).mp4", duration: "4:29" },
+                
+                /* ASTROWORLD - Full list */
+                { id: 1501, albumId: 15, title: "STARGAZING", artist: "Travis Scott", url: "https://www.soundhelix.com/examples/mp3/SoundHelix-Song-1.mp3", duration: "4:31" },
+                { id: 1502, albumId: 15, title: "CAROUSEL", artist: "Travis Scott", url: "https://www.soundhelix.com/examples/mp3/SoundHelix-Song-2.mp3", duration: "3:00" },
+                { id: 1503, albumId: 15, title: "SICKO MODE", artist: "Travis Scott", url: "https://www.soundhelix.com/examples/mp3/SoundHelix-Song-3.mp3", duration: "5:12" },
+                { id: 1504, albumId: 15, title: "R.I.P. SCREW", artist: "Travis Scott", url: "https://www.soundhelix.com/examples/mp3/SoundHelix-Song-4.mp3", duration: "3:05" },
+                { id: 1505, albumId: 15, title: "STOP TRYING TO BE GOD", artist: "Travis Scott", url: "https://www.soundhelix.com/examples/mp3/SoundHelix-Song-5.mp3", duration: "5:38" },
+                { id: 1506, albumId: 15, title: "NO BYSTANDERS", artist: "Travis Scott", url: "https://www.soundhelix.com/examples/mp3/SoundHelix-Song-6.mp3", duration: "3:38" },
+                { id: 1507, albumId: 15, title: "SKELETONS", artist: "Travis Scott", url: "https://www.soundhelix.com/examples/mp3/SoundHelix-Song-7.mp3", duration: "2:25" },
+                { id: 1508, albumId: 15, title: "WAKE UP", artist: "Travis Scott", url: "https://www.soundhelix.com/examples/mp3/SoundHelix-Song-8.mp3", duration: "3:52" },
+                { id: 1509, albumId: 15, title: "5% TINT", artist: "Travis Scott", url: "https://www.soundhelix.com/examples/mp3/SoundHelix-Song-9.mp3", duration: "3:16" },
+                { id: 1510, albumId: 15, title: "NC-17", artist: "Travis Scott", url: "https://www.soundhelix.com/examples/mp3/SoundHelix-Song-10.mp3", duration: "2:37" },
+                { id: 1511, albumId: 15, title: "ASTROTHUNDER", artist: "Travis Scott", url: "https://www.soundhelix.com/examples/mp3/SoundHelix-Song-11.mp3", duration: "2:23" },
+                { id: 1512, albumId: 15, title: "YOSEMITE", artist: "Travis Scott", url: "https://www.soundhelix.com/examples/mp3/SoundHelix-Song-12.mp3", duration: "2:30" },
+                { id: 1513, albumId: 15, title: "CAN'T SAY", artist: "Travis Scott", url: "https://www.soundhelix.com/examples/mp3/SoundHelix-Song-13.mp3", duration: "3:18" },
+                { id: 1514, albumId: 15, title: "WHO? WHAT!", artist: "Travis Scott", url: "https://www.soundhelix.com/examples/mp3/SoundHelix-Song-14.mp3", duration: "2:56" },
+                { id: 1515, albumId: 15, title: "BUTTERFLY EFFECT", artist: "Travis Scott", url: "https://www.soundhelix.com/examples/mp3/SoundHelix-Song-15.mp3", duration: "3:11" },
+                { id: 1516, albumId: 15, title: "HOUSTONFORNICATION", artist: "Travis Scott", url: "https://www.soundhelix.com/examples/mp3/SoundHelix-Song-16.mp3", duration: "3:38" },
+                { id: 1517, albumId: 15, title: "COFFEE BEAN", artist: "Travis Scott", url: "https://www.soundhelix.com/examples/mp3/SoundHelix-Song-1.mp3", duration: "3:29" },
+
+                /* UTOPIA - Full list */
+                { id: 1601, albumId: 16, title: "HYAENA", artist: "Travis Scott", url: "https://www.soundhelix.com/examples/mp3/SoundHelix-Song-1.mp3", duration: "3:42" },
+                { id: 1602, albumId: 16, title: "THANK GOD", artist: "Travis Scott", url: "https://www.soundhelix.com/examples/mp3/SoundHelix-Song-2.mp3", duration: "3:04" },
+                { id: 1603, albumId: 16, title: "MODERN JAM (feat. Teezo Touchdown)", artist: "Travis Scott", url: "https://www.soundhelix.com/examples/mp3/SoundHelix-Song-3.mp3", duration: "4:15" },
+                { id: 1604, albumId: 16, title: "MY EYES", artist: "Travis Scott", url: "https://www.soundhelix.com/examples/mp3/SoundHelix-Song-4.mp3", duration: "4:11" },
+                { id: 1605, albumId: 16, title: "GOD'S COUNTRY", artist: "Travis Scott", url: "https://www.soundhelix.com/examples/mp3/SoundHelix-Song-5.mp3", duration: "2:07" },
+                { id: 1606, albumId: 16, title: "SIRENS", artist: "Travis Scott", url: "https://www.soundhelix.com/examples/mp3/SoundHelix-Song-6.mp3", duration: "3:24" },
+                { id: 1607, albumId: 16, title: "MELTDOWN (feat. Drake)", artist: "Travis Scott", url: "https://www.soundhelix.com/examples/mp3/SoundHelix-Song-7.mp3", duration: "4:06" },
+                { id: 1608, albumId: 16, title: "FE!N (feat. Playboi Carti)", artist: "Travis Scott", url: "https://www.soundhelix.com/examples/mp3/SoundHelix-Song-8.mp3", duration: "3:11" },
+                { id: 1609, albumId: 16, title: "DELRESTO (ECHOES) (feat. Beyoncé)", artist: "Travis Scott", url: "https://www.soundhelix.com/examples/mp3/SoundHelix-Song-9.mp3", duration: "4:34" },
+                { id: 1610, albumId: 16, title: "I KNOW ?", artist: "Travis Scott", url: "https://www.soundhelix.com/examples/mp3/SoundHelix-Song-10.mp3", duration: "3:31" },
+                { id: 1611, albumId: 16, title: "TOPIA TWINS (feat. Rob49 & 21 Savage)", artist: "Travis Scott", url: "https://www.soundhelix.com/examples/mp3/SoundHelix-Song-11.mp3", duration: "3:43" },
+                { id: 1612, albumId: 16, title: "CIRCUS MAXIMUS (feat. The Weeknd & Swae Lee)", artist: "Travis Scott", url: "https://www.soundhelix.com/examples/mp3/SoundHelix-Song-12.mp3", duration: "4:18" },
+                { id: 1613, albumId: 16, title: "PARASAIL (feat. Yung Lean & Dave Chappelle)", artist: "Travis Scott", url: "https://www.soundhelix.com/examples/mp3/SoundHelix-Song-13.mp3", duration: "2:34" },
+                { id: 1614, albumId: 16, title: "SKITZO (feat. Young Thug)", artist: "Travis Scott", url: "https://www.soundhelix.com/examples/mp3/SoundHelix-Song-14.mp3", duration: "6:06" },
+                { id: 1615, albumId: 16, title: "LOST FOREVER (feat. Westside Gunn & James Blake)", artist: "Travis Scott", url: "https://www.soundhelix.com/examples/mp3/SoundHelix-Song-15.mp3", duration: "2:43" },
+                { id: 1616, albumId: 16, title: "LOOOVE (feat. Kid Cudi)", artist: "Travis Scott", url: "https://www.soundhelix.com/examples/mp3/SoundHelix-Song-16.mp3", duration: "3:46" },
+                { id: 1617, albumId: 16, title: "K-POP (com Bad Bunny & The Weeknd)", artist: "Travis Scott", url: "https://www.soundhelix.com/examples/mp3/SoundHelix-Song-1.mp3", duration: "3:05" },
+                { id: 1618, albumId: 16, title: "TELEKINESIS (feat. SZA & Future)", artist: "Travis Scott", url: "https://www.soundhelix.com/examples/mp3/SoundHelix-Song-2.mp3", duration: "5:53" },
+                { id: 1619, albumId: 16, title: "TIL FURTHER NOTICE (feat. James Blake & 21 Savage)", artist: "Travis Scott", url: "https://www.soundhelix.com/examples/mp3/SoundHelix-Song-3.mp3", duration: "5:14" },
+
+                /* Thank Me Later - Full list */
+                { id: 2001, albumId: 20, title: "Fireworks (feat. Alicia Keys)", artist: "Drake", url: "https://www.soundhelix.com/examples/mp3/SoundHelix-Song-1.mp3", duration: "5:13" },
+                { id: 2002, albumId: 20, title: "Karaoke", artist: "Drake", url: "https://www.soundhelix.com/examples/mp3/SoundHelix-Song-2.mp3", duration: "3:48" },
+                { id: 2003, albumId: 20, title: "The Resistance", artist: "Drake", url: "https://www.soundhelix.com/examples/mp3/SoundHelix-Song-3.mp3", duration: "3:45" },
+                { id: 2004, albumId: 20, title: "Over", artist: "Drake", url: "https://www.soundhelix.com/examples/mp3/SoundHelix-Song-4.mp3", duration: "3:54" },
+                { id: 2005, albumId: 20, title: "Show Me a Good Time", artist: "Drake", url: "https://www.soundhelix.com/examples/mp3/SoundHelix-Song-5.mp3", duration: "3:30" },
+                { id: 2006, albumId: 20, title: "Up All Night (feat. Nicki Minaj)", artist: "Drake", url: "https://www.soundhelix.com/examples/mp3/SoundHelix-Song-6.mp3", duration: "3:54" },
+                { id: 2007, albumId: 20, title: "Fancy (feat. T.I. & Swizz Beatz)", artist: "Drake", url: "https://www.soundhelix.com/examples/mp3/SoundHelix-Song-7.mp3", duration: "5:19" },
+                { id: 2008, albumId: 20, title: "Shut It Down (feat. The-Dream)", artist: "Drake", url: "https://www.soundhelix.com/examples/mp3/SoundHelix-Song-8.mp3", duration: "6:54" },
+                { id: 2009, albumId: 20, title: "Unforgettable (feat. Young Jeezy)", artist: "Drake", url: "https://www.soundhelix.com/examples/mp3/SoundHelix-Song-9.mp3", duration: "3:34" },
+                { id: 2010, albumId: 20, title: "Light Up (feat. Jay-Z)", artist: "Drake", url: "https://www.soundhelix.com/examples/mp3/SoundHelix-Song-10.mp3", duration: "4:34" },
+                { id: 2011, albumId: 20, title: "Miss Me (feat. Lil Wayne)", artist: "Drake", url: "https://www.soundhelix.com/examples/mp3/SoundHelix-Song-11.mp3", duration: "5:06" },
+                { id: 2012, albumId: 20, title: "Cece's Interlude", artist: "Drake", url: "https://www.soundhelix.com/examples/mp3/SoundHelix-Song-12.mp3", duration: "2:34" },
+                { id: 2013, albumId: 20, title: "Find Your Love", artist: "Drake", url: "https://www.soundhelix.com/examples/mp3/SoundHelix-Song-13.mp3", duration: "3:29" },
+                { id: 2014, albumId: 20, title: "Thank Me Now", artist: "Drake", url: "https://www.soundhelix.com/examples/mp3/SoundHelix-Song-14.mp3", duration: "5:29" },
+
+                /* Take Care - Full list */
+                { id: 7, albumId: 6, title: "Over My Dead Body", artist: "Drake", url: "https://www.soundhelix.com/examples/mp3/SoundHelix-Song-1.mp3", duration: "4:33" },
+                { id: 200, albumId: 6, title: "Shot for Me", artist: "Drake", url: "https://www.soundhelix.com/examples/mp3/SoundHelix-Song-2.mp3", duration: "3:59" },
+                { id: 201, albumId: 6, title: "Headlines", artist: "Drake", url: "https://www.soundhelix.com/examples/mp3/SoundHelix-Song-3.mp3", duration: "3:26" },
+                { id: 202, albumId: 6, title: "Crew Love (feat. The Weeknd)", artist: "Drake", url: "https://www.soundhelix.com/examples/mp3/SoundHelix-Song-4.mp3", duration: "3:29" },
+                { id: 203, albumId: 6, title: "Take Care (feat. Rihanna)", artist: "Drake", url: "https://www.soundhelix.com/examples/mp3/SoundHelix-Song-5.mp3", duration: "4:37" },
+                { id: 12, albumId: 6, title: "Marvins Room", artist: "Drake", url: "https://www.soundhelix.com/examples/mp3/SoundHelix-Song-6.mp3", duration: "5:47" },
+                { id: 217, albumId: 6, title: "Buried Alive Interlude", artist: "Drake", url: "https://www.soundhelix.com/examples/mp3/SoundHelix-Song-7.mp3", duration: "2:31" },
+                { id: 204, albumId: 6, title: "Under Ground Kings", artist: "Drake", url: "https://www.soundhelix.com/examples/mp3/SoundHelix-Song-8.mp3", duration: "3:32" },
+                { id: 205, albumId: 6, title: "We’ll Be Fine (feat. Birdman)", artist: "Drake", url: "https://www.soundhelix.com/examples/mp3/SoundHelix-Song-9.mp3", duration: "4:08" },
+                { id: 206, albumId: 6, title: "Make Me Proud (feat. Nicki Minaj)", artist: "Drake", url: "https://www.soundhelix.com/examples/mp3/SoundHelix-Song-10.mp3", duration: "3:39" },
+                { id: 207, albumId: 6, title: "Lord Knows (feat. Rick Ross)", artist: "Drake", url: "https://www.soundhelix.com/examples/mp3/SoundHelix-Song-11.mp3", duration: "5:08" },
+                { id: 208, albumId: 6, title: "Cameras / Good Ones Go Interlude", artist: "Drake", url: "https://www.soundhelix.com/examples/mp3/SoundHelix-Song-12.mp3", duration: "7:15" },
+                { id: 209, albumId: 6, title: "Doing It Wrong", artist: "Drake", url: "https://www.soundhelix.com/examples/mp3/SoundHelix-Song-13.mp3", duration: "4:25" },
+                { id: 210, albumId: 6, title: "The Real Her (feat. Lil Wayne & André 3000)", artist: "Drake", url: "https://www.soundhelix.com/examples/mp3/SoundHelix-Song-14.mp3", duration: "5:21" },
+                { id: 211, albumId: 6, title: "Look What You’ve Done", artist: "Drake", url: "https://www.soundhelix.com/examples/mp3/SoundHelix-Song-15.mp3", duration: "5:02" },
+                { id: 212, albumId: 6, title: "HYFR (Hell Ya Fucking Right) (feat. Lil Wayne)", artist: "Drake", url: "https://www.soundhelix.com/examples/mp3/SoundHelix-Song-16.mp3", duration: "3:27" },
+                { id: 213, albumId: 6, title: "Practice", artist: "Drake", url: "https://www.soundhelix.com/examples/mp3/SoundHelix-Song-1.mp3", duration: "3:58" },
+                { id: 214, albumId: 6, title: "The Ride", artist: "Drake", url: "https://www.soundhelix.com/examples/mp3/SoundHelix-Song-2.mp3", duration: "5:51" },
+
+                /* Nothing Was the Same - Full list */
+                { id: 2101, albumId: 21, title: "Tuscan Leather", artist: "Drake", url: "https://www.soundhelix.com/examples/mp3/SoundHelix-Song-1.mp3", duration: "6:06" },
+                { id: 2102, albumId: 21, title: "Furthest Thing", artist: "Drake", url: "https://www.soundhelix.com/examples/mp3/SoundHelix-Song-2.mp3", duration: "4:27" },
+                { id: 2103, albumId: 21, title: "Started From the Bottom", artist: "Drake", url: "https://www.soundhelix.com/examples/mp3/SoundHelix-Song-3.mp3", duration: "2:53" },
+                { id: 2104, albumId: 21, title: "Wu-Tang Forever", artist: "Drake", url: "https://www.soundhelix.com/examples/mp3/SoundHelix-Song-4.mp3", duration: "3:37" },
+                { id: 2105, albumId: 21, title: "Own It", artist: "Drake", url: "https://www.soundhelix.com/examples/mp3/SoundHelix-Song-5.mp3", duration: "4:11" },
+                { id: 2106, albumId: 21, title: "Worst Behavior", artist: "Drake", url: "https://www.soundhelix.com/examples/mp3/SoundHelix-Song-6.mp3", duration: "4:30" },
+                { id: 2107, albumId: 21, title: "From Time (feat. Jhené Aiko)", artist: "Drake", url: "https://www.soundhelix.com/examples/mp3/SoundHelix-Song-7.mp3", duration: "5:22" },
+                { id: 2108, albumId: 21, title: "Hold On, We're Going Home (feat. Majid Jordan)", artist: "Drake", url: "https://www.soundhelix.com/examples/mp3/SoundHelix-Song-8.mp3", duration: "3:47" },
+                { id: 2109, albumId: 21, title: "Connect", artist: "Drake", url: "https://www.soundhelix.com/examples/mp3/SoundHelix-Song-9.mp3", duration: "4:56" },
+                { id: 2110, albumId: 21, title: "The Language", artist: "Drake", url: "https://www.soundhelix.com/examples/mp3/SoundHelix-Song-10.mp3", duration: "3:44" },
+                { id: 2111, albumId: 21, title: "305 to My City (feat. Detail)", artist: "Drake", url: "https://www.soundhelix.com/examples/mp3/SoundHelix-Song-11.mp3", duration: "4:16" },
+                { id: 2112, albumId: 21, title: "Too Much (feat. Sampha)", artist: "Drake", url: "https://www.soundhelix.com/examples/mp3/SoundHelix-Song-12.mp3", duration: "4:21" },
+                { id: 2113, albumId: 21, title: "Pound Cake / Paris Morton Music 2 (feat. Jay-Z)", artist: "Drake", url: "https://www.soundhelix.com/examples/mp3/SoundHelix-Song-13.mp3", duration: "7:13" },
+
+                /* Certified Lover Boy - Full list */
+                { id: 2201, albumId: 22, title: "Champagne Poetry", artist: "Drake", url: "https://www.soundhelix.com/examples/mp3/SoundHelix-Song-1.mp3", duration: "5:36" },
+                { id: 2202, albumId: 22, title: "Papi's Home", artist: "Drake", url: "https://www.soundhelix.com/examples/mp3/SoundHelix-Song-2.mp3", duration: "2:58" },
+                { id: 2203, albumId: 22, title: "Girls Want Girls (feat. Lil Baby)", artist: "Drake", url: "https://www.soundhelix.com/examples/mp3/SoundHelix-Song-3.mp3", duration: "3:41" },
+                { id: 2204, albumId: 22, title: "In the Bible", artist: "Drake", url: "https://www.soundhelix.com/examples/mp3/SoundHelix-Song-4.mp3", duration: "4:56" },
+                { id: 2205, albumId: 22, title: "Love All (feat. Jay-Z)", artist: "Drake", url: "https://www.soundhelix.com/examples/mp3/SoundHelix-Song-5.mp3", duration: "3:48" },
+                { id: 2206, albumId: 22, title: "Fair Trade (feat. Travis Scott)", artist: "Drake", url: "https://www.soundhelix.com/examples/mp3/SoundHelix-Song-6.mp3", duration: "4:51" },
+                { id: 2207, albumId: 22, title: "Way 2 Sexy (feat. Future & Young Thug)", artist: "Drake", url: "https://www.soundhelix.com/examples/mp3/SoundHelix-Song-7.mp3", duration: "4:17" },
+                { id: 2208, albumId: 22, title: "TSU", artist: "Drake", url: "https://www.soundhelix.com/examples/mp3/SoundHelix-Song-8.mp3", duration: "5:08" },
+                { id: 2209, albumId: 22, title: "N 2 Deep", artist: "Drake", url: "https://www.soundhelix.com/examples/mp3/SoundHelix-Song-9.mp3", duration: "4:33" },
+                { id: 2210, albumId: 22, title: "Pipe Down", artist: "Drake", url: "https://www.soundhelix.com/examples/mp3/SoundHelix-Song-10.mp3", duration: "3:25" },
+                { id: 2211, albumId: 22, title: "Yebba's Heartbreak", artist: "Drake", url: "https://www.soundhelix.com/examples/mp3/SoundHelix-Song-11.mp3", duration: "2:13" },
+                { id: 2212, albumId: 22, title: "No Friends In The Industry", artist: "Drake", url: "https://www.soundhelix.com/examples/mp3/SoundHelix-Song-12.mp3", duration: "3:24" },
+                { id: 2213, albumId: 22, title: "Knife Talk (feat. 21 Savage)", artist: "Drake", url: "https://www.soundhelix.com/examples/mp3/SoundHelix-Song-13.mp3", duration: "4:02" },
+                { id: 2214, albumId: 22, title: "7am on Bridle Path", artist: "Drake", url: "https://www.soundhelix.com/examples/mp3/SoundHelix-Song-14.mp3", duration: "3:59" },
+                { id: 2215, albumId: 22, title: "Race My Mind", artist: "Drake", url: "https://www.soundhelix.com/examples/mp3/SoundHelix-Song-15.mp3", duration: "4:29" },
+                { id: 2216, albumId: 22, title: "Fountains", artist: "Drake", url: "https://www.soundhelix.com/examples/mp3/SoundHelix-Song-16.mp3", duration: "3:12" },
+                { id: 2217, albumId: 22, title: "Get Along Better", artist: "Drake", url: "https://www.soundhelix.com/examples/mp3/SoundHelix-Song-1.mp3", duration: "3:49" },
+                { id: 2218, albumId: 22, title: "You Only Live Twice", artist: "Drake", url: "https://www.soundhelix.com/examples/mp3/SoundHelix-Song-2.mp3", duration: "3:33" },
+                { id: 2219, albumId: 22, title: "IMY2", artist: "Drake", url: "https://www.soundhelix.com/examples/mp3/SoundHelix-Song-3.mp3", duration: "4:12" },
+                { id: 2220, albumId: 22, title: "Fucking Fans", artist: "Drake", url: "https://www.soundhelix.com/examples/mp3/SoundHelix-Song-4.mp3", duration: "4:05" },
+                { id: 2221, albumId: 22, title: "The Remorse", artist: "Drake", url: "https://www.soundhelix.com/examples/mp3/SoundHelix-Song-5.mp3", duration: "5:51" },
+
+                /* Stoney - Full list */
+                { id: 3001, albumId: 30, title: "Broken Whiskey Glass", artist: "Post Malone", url: "https://www.soundhelix.com/examples/mp3/SoundHelix-Song-1.mp3", duration: "3:53" },
+                { id: 3002, albumId: 30, title: "Big Lie", artist: "Post Malone", url: "https://www.soundhelix.com/examples/mp3/SoundHelix-Song-2.mp3", duration: "3:27" },
+                { id: 3003, albumId: 30, title: "Deja Vu (feat. Justin Bieber)", artist: "Post Malone", url: "https://www.soundhelix.com/examples/mp3/SoundHelix-Song-3.mp3", duration: "3:54" },
+                { id: 3004, albumId: 30, title: "No Option", artist: "Post Malone", url: "https://www.soundhelix.com/examples/mp3/SoundHelix-Song-4.mp3", duration: "2:59" },
+                { id: 3005, albumId: 30, title: "Cold", artist: "Post Malone", url: "https://www.soundhelix.com/examples/mp3/SoundHelix-Song-5.mp3", duration: "4:28" },
+                { id: 3006, albumId: 30, title: "White Iverson", artist: "Post Malone", url: "https://www.soundhelix.com/examples/mp3/SoundHelix-Song-6.mp3", duration: "3:41" },
+                { id: 3007, albumId: 30, title: "I Fall Apart", artist: "Post Malone", url: "https://www.soundhelix.com/examples/mp3/SoundHelix-Song-7.mp3", duration: "3:43" },
+                { id: 3008, albumId: 30, title: "Patient", artist: "Post Malone", url: "https://www.soundhelix.com/examples/mp3/SoundHelix-Song-8.mp3", duration: "3:14" },
+                { id: 3009, albumId: 30, title: "Go Flex", artist: "Post Malone", url: "https://www.soundhelix.com/examples/mp3/SoundHelix-Song-9.mp3", duration: "2:59" },
+                { id: 3010, albumId: 30, title: "Feel (feat. Kehlani)", artist: "Post Malone", url: "https://www.soundhelix.com/examples/mp3/SoundHelix-Song-10.mp3", duration: "3:17" },
+                { id: 3011, albumId: 30, title: "Too Young", artist: "Post Malone", url: "https://www.soundhelix.com/examples/mp3/SoundHelix-Song-11.mp3", duration: "3:57" },
+                { id: 3012, albumId: 30, title: "Congratulations (feat. Quavo)", artist: "Post Malone", url: "https://www.soundhelix.com/examples/mp3/SoundHelix-Song-12.mp3", duration: "3:40" },
+                { id: 3013, albumId: 30, title: "Up There", artist: "Post Malone", url: "https://www.soundhelix.com/examples/mp3/SoundHelix-Song-13.mp3", duration: "3:14" },
+                { id: 3014, albumId: 30, title: "Yours Truly, Austin Post", artist: "Post Malone", url: "https://www.soundhelix.com/examples/mp3/SoundHelix-Song-14.mp3", duration: "3:39" },
+
+                /* MB D T F - Full list */
+                { id: 100, albumId: 10, title: "Heartbreaker", artist: "Justin Bieber", url: "/music/justin bieber/Justin Bieber - Journals (Álbum 2013)/Heartbreaker (1080p_25fps_H264-128kbit_AAC).mp4", duration: "4:22" },
+                { id: 101, albumId: 10, title: "All That Matters", artist: "Justin Bieber", url: "/music/justin bieber/Justin Bieber - Journals (Álbum 2013)/All That Matters (1080p_25fps_H264-128kbit_AAC).mp4", duration: "3:11" },
+                { id: 102, albumId: 10, title: "Hold Tight", artist: "Justin Bieber", url: "/music/justin bieber/Justin Bieber - Journals (Álbum 2013)/Hold Tight (1080p_25fps_H264-128kbit_AAC).mp4", duration: "4:15" },
+                { id: 103, albumId: 10, title: "Recovery", artist: "Justin Bieber", url: "/music/justin bieber/Justin Bieber - Journals (Álbum 2013)/Recovery (1080p_25fps_H264-128kbit_AAC).mp4", duration: "3:02" },
+                { id: 104, albumId: 10, title: "Bad Day", artist: "Justin Bieber", url: "/music/justin bieber/Justin Bieber - Journals (Álbum 2013)/Bad Day (1080p_25fps_H264-128kbit_AAC).mp4", duration: "2:26" },
+                { id: 105, albumId: 10, title: "All Bad", artist: "Justin Bieber", url: "/music/justin bieber/Justin Bieber - Journals (Álbum 2013)/All Bad (1080p_25fps_H264-128kbit_AAC).mp4", duration: "3:02" },
+                { id: 106, albumId: 10, title: "PYD (feat. R. Kelly)", artist: "Justin Bieber", url: "/music/justin bieber/Justin Bieber - Journals (Álbum 2013)/PYD (1080p_25fps_H264-128kbit_AAC).mp4", duration: "5:17" },
+                { id: 107, albumId: 10, title: "Roller Coaster", artist: "Justin Bieber", url: "/music/justin bieber/Justin Bieber - Journals (Álbum 2013)/Roller Coaster (1080p_25fps_H264-128kbit_AAC).mp4", duration: "3:21" },
+                { id: 108, albumId: 10, title: "Change Me", artist: "Justin Bieber", url: "/music/justin bieber/Justin Bieber - Journals (Álbum 2013)/Change Me (1080p_25fps_H264-128kbit_AAC).mp4", duration: "2:47" },
+                { id: 109, albumId: 10, title: "Confident (feat. Chance The Rapper)", artist: "Justin Bieber", url: "/music/justin bieber/Justin Bieber - Journals (Álbum 2013)/Confident (1080p_25fps_H264-128kbit_AAC).mp4", duration: "4:08" },
+                { id: 110, albumId: 10, title: "One Life", artist: "Justin Bieber", url: "/music/justin bieber/Justin Bieber - Journals (Álbum 2013)/One Life (1080p_25fps_H264-128kbit_AAC).mp4", duration: "4:02" },
+                { id: 111, albumId: 10, title: "Backpack (feat. Lil Wayne)", artist: "Justin Bieber", url: "/music/justin bieber/Justin Bieber - Journals (Álbum 2013)/Backpack (1080p_25fps_H264-128kbit_AAC).mp4", duration: "4:11" },
+                { id: 112, albumId: 10, title: "What’s Hatnin’ (feat. Future)", artist: "Justin Bieber", url: "/music/justin bieber/Justin Bieber - Journals (Álbum 2013)/What’s Hatnin’ (1080p_25fps_H264-128kbit_AAC).mp4", duration: "3:28" },
+                { id: 113, albumId: 10, title: "Swap It Out", artist: "Justin Bieber", url: "/music/justin bieber/Justin Bieber - Journals (Álbum 2013)/Swap It Out (1080p_25fps_H264-128kbit_AAC).mp4", duration: "4:01" },
+                { id: 114, albumId: 10, title: "Memphis (feat. Big Sean)", artist: "Justin Bieber", url: "/music/justin bieber/Justin Bieber - Journals (Álbum 2013)/Memphis (1080p_25fps_H264-128kbit_AAC).mp4", duration: "3:43" },
+                { id: 115, albumId: 10, title: "Flatline", artist: "Justin Bieber", url: "https://www.soundhelix.com/examples/mp3/SoundHelix-Song-16.mp3", duration: "3:39" },
+
+                /* Changes - Full list */
+                { id: 120, albumId: 11, title: "All Around Me", artist: "Justin Bieber", url: "/music/justin bieber/Justin Bieber - Changes (Full album)/All Around Me (1080p_25fps_H264-128kbit_AAC).mp4", duration: "2:16" },
+                { id: 121, albumId: 11, title: "Habitual", artist: "Justin Bieber", url: "/music/justin bieber/Justin Bieber - Changes (Full album)/Habitual (1080p_25fps_H264-128kbit_AAC).mp4", duration: "2:48" },
+                { id: 122, albumId: 11, title: "Come Around Me", artist: "Justin Bieber", url: "/music/justin bieber/Justin Bieber - Changes (Full album)/Come Around Me (1080p_25fps_H264-128kbit_AAC).mp4", duration: "3:20" },
+                { id: 123, albumId: 11, title: "Intentions (feat. Quavo)", artist: "Justin Bieber", url: "/music/justin bieber/Justin Bieber - Changes (Full album)/Intentions (1080p_25fps_H264-128kbit_AAC).mp4", duration: "3:32" },
+                { id: 124, albumId: 11, title: "Yummy", artist: "Justin Bieber", url: "/music/justin bieber/Justin Bieber - Changes (Full album)/Yummy (1080p_25fps_H264-128kbit_AAC).mp4", duration: "3:28" },
+                { id: 125, albumId: 11, title: "Available", artist: "Justin Bieber", url: "/music/justin bieber/Justin Bieber - Changes (Full album)/Available (1080p_25fps_H264-128kbit_AAC).mp4", duration: "3:15" },
+                { id: 126, albumId: 11, title: "Forever (feat. Post Malone & Clever)", artist: "Justin Bieber", url: "/music/justin bieber/Justin Bieber - Changes (Full album)/Forever (1080p_25fps_H264-128kbit_AAC).mp4", duration: "3:21" },
+                { id: 127, albumId: 11, title: "Running Over (feat. Lil Dicky)", artist: "Justin Bieber", url: "/music/justin bieber/Justin Bieber - Changes (Full album)/Running Over (1080p_25fps_H264-128kbit_AAC).mp4", duration: "2:59" },
+                { id: 128, albumId: 11, title: "Take It Out on Me", artist: "Justin Bieber", url: "/music/justin bieber/Justin Bieber - Changes (Full album)/Take It Out On Me (1080p_25fps_H264-128kbit_AAC).mp4", duration: "2:58" },
+                { id: 129, albumId: 11, title: "Second Emotion (feat. Travis Scott)", artist: "Justin Bieber", url: "/music/justin bieber/Justin Bieber - Changes (Full album)/Second Emotion (1080p_25fps_H264-128kbit_AAC).mp4", duration: "3:22" },
+                { id: 130, albumId: 11, title: "Get Me (feat. Kehlani)", artist: "Justin Bieber", url: "/music/justin bieber/Justin Bieber - Changes (Full album)/Get Me (1080p_25fps_H264-128kbit_AAC).mp4", duration: "3:05" },
+                { id: 131, albumId: 11, title: "E.T.A.", artist: "Justin Bieber", url: "/music/justin bieber/Justin Bieber - Changes (Full album)/E.T.A. (1080p_25fps_H264-128kbit_AAC).mp4", duration: "2:56" },
+                { id: 132, albumId: 11, title: "Changes", artist: "Justin Bieber", url: "/music/justin bieber/Justin Bieber - Changes (Full album)/Changes (1080p_25fps_H264-128kbit_AAC).mp4", duration: "2:15" },
+                { id: 133, albumId: 11, title: "Confirmation", artist: "Justin Bieber", url: "/music/justin bieber/Justin Bieber - Changes (Full album)/Confirmation (1080p_25fps_H264-128kbit_AAC).mp4", duration: "2:50" },
+                { id: 134, albumId: 11, title: "That's What Love Is", artist: "Justin Bieber", url: "/music/justin bieber/Justin Bieber - Changes (Full album)/That's What Love Is (1080p_25fps_H264-128kbit_AAC).mp4", duration: "2:45" },
+                { id: 135, albumId: 11, title: "At Least for Now", artist: "Justin Bieber", url: "/music/justin bieber/Justin Bieber - Changes (Full album)/At Least For Now (1080p_25fps_H264-128kbit_AAC).mp4", duration: "2:29" },
+
+                /* Justice - Full list */
+                { id: 140, albumId: 12, title: "2 Much", artist: "Justin Bieber", url: "https://www.soundhelix.com/examples/mp3/SoundHelix-Song-1.mp3", duration: "2:32" },
+                { id: 141, albumId: 12, title: "Deserve You", artist: "Justin Bieber", url: "https://www.soundhelix.com/examples/mp3/SoundHelix-Song-2.mp3", duration: "3:07" },
+                { id: 142, albumId: 12, title: "As I Am (feat. Khalid)", artist: "Justin Bieber", url: "https://www.soundhelix.com/examples/mp3/SoundHelix-Song-3.mp3", duration: "2:54" },
+                { id: 143, albumId: 12, title: "Off My Face", artist: "Justin Bieber", url: "https://www.soundhelix.com/examples/mp3/SoundHelix-Song-4.mp3", duration: "2:36" },
+                { id: 144, albumId: 12, title: "Holy (feat. Chance the Rapper)", artist: "Justin Bieber", url: "https://www.soundhelix.com/examples/mp3/SoundHelix-Song-5.mp3", duration: "3:32" },
+                { id: 145, albumId: 12, title: "Unstable (feat. The Kid LAROI)", artist: "Justin Bieber", url: "https://www.soundhelix.com/examples/mp3/SoundHelix-Song-6.mp3", duration: "2:38" },
+                { id: 146, albumId: 12, title: "Interlude", artist: "Justin Bieber", url: "https://www.soundhelix.com/examples/mp3/SoundHelix-Song-7.mp3", duration: "1:15" },
+                { id: 147, albumId: 12, title: "Die For You (feat. Dominic Fike)", artist: "Justin Bieber", url: "https://www.soundhelix.com/examples/mp3/SoundHelix-Song-8.mp3", duration: "3:18" },
+                { id: 148, albumId: 12, title: "Hold On", artist: "Justin Bieber", url: "https://www.soundhelix.com/examples/mp3/SoundHelix-Song-9.mp3", duration: "2:50" },
+                { id: 149, albumId: 12, title: "Somebody", artist: "Justin Bieber", url: "https://www.soundhelix.com/examples/mp3/SoundHelix-Song-10.mp3", duration: "2:59" },
+                { id: 150, albumId: 12, title: "Ghost", artist: "Justin Bieber", url: "https://www.soundhelix.com/examples/mp3/SoundHelix-Song-11.mp3", duration: "2:33" },
+                { id: 151, albumId: 12, title: "Peaches (feat. Daniel Caesar & Giveon)", artist: "Justin Bieber", url: "https://www.soundhelix.com/examples/mp3/SoundHelix-Song-12.mp3", duration: "3:18" },
+                { id: 152, albumId: 12, title: "MLK Interlude", artist: "Justin Bieber", url: "https://www.soundhelix.com/examples/mp3/SoundHelix-Song-13.mp3", duration: "1:44" },
+                { id: 153, albumId: 12, title: "Die Left Me", artist: "Justin Bieber", url: "https://www.soundhelix.com/examples/mp3/SoundHelix-Song-14.mp3", duration: "2:30" },
+                { id: 154, albumId: 12, title: "Loved By You (feat. Burna Boy)", artist: "Justin Bieber", url: "https://www.soundhelix.com/examples/mp3/SoundHelix-Song-15.mp3", duration: "2:39" },
+                { id: 155, albumId: 12, title: "Anyone", artist: "Justin Bieber", url: "https://www.soundhelix.com/examples/mp3/SoundHelix-Song-16.mp3", duration: "3:10" },
+                { id: 156, albumId: 12, title: "Lonely (com Benny Blanco)", artist: "Justin Bieber", url: "https://www.soundhelix.com/examples/mp3/SoundHelix-Song-1.mp3", duration: "2:29" },
+
+                /* Purpose - Full list */
+                { id: 1301, albumId: 13, title: "Mark My Words", artist: "Justin Bieber", url: "https://www.soundhelix.com/examples/mp3/SoundHelix-Song-1.mp3", duration: "2:14" },
+                { id: 1302, albumId: 13, title: "I'll Show You", artist: "Justin Bieber", url: "https://www.soundhelix.com/examples/mp3/SoundHelix-Song-2.mp3", duration: "3:19" },
+                { id: 1303, albumId: 13, title: "What Do You Mean?", artist: "Justin Bieber", url: "https://www.soundhelix.com/examples/mp3/SoundHelix-Song-3.mp3", duration: "3:25" },
+                { id: 1304, albumId: 13, title: "Sorry", artist: "Justin Bieber", url: "https://www.soundhelix.com/examples/mp3/SoundHelix-Song-4.mp3", duration: "3:20" },
+                { id: 1305, albumId: 13, title: "Love Yourself", artist: "Justin Bieber", url: "https://www.soundhelix.com/examples/mp3/SoundHelix-Song-5.mp3", duration: "3:53" },
+                { id: 1306, albumId: 13, title: "Company", artist: "Justin Bieber", url: "https://www.soundhelix.com/examples/mp3/SoundHelix-Song-6.mp3", duration: "3:28" },
+                { id: 1307, albumId: 13, title: "No Pressure (feat. Big Sean)", artist: "Justin Bieber", url: "https://www.soundhelix.com/examples/mp3/SoundHelix-Song-7.mp3", duration: "4:46" },
+                { id: 1308, albumId: 13, title: "No Sense (feat. Travis Scott)", artist: "Justin Bieber", url: "https://www.soundhelix.com/examples/mp3/SoundHelix-Song-8.mp3", duration: "4:35" },
+                { id: 1309, albumId: 13, title: "The Feeling (feat. Halsey)", artist: "Justin Bieber", url: "https://www.soundhelix.com/examples/mp3/SoundHelix-Song-9.mp3", duration: "4:04" },
+                { id: 1310, albumId: 13, title: "Life Is Worth Living", artist: "Justin Bieber", url: "https://www.soundhelix.com/examples/mp3/SoundHelix-Song-10.mp3", duration: "3:54" },
+                { id: 1311, albumId: 13, title: "Where Are Ü Now (com Jack Ü)", artist: "Justin Bieber", url: "https://www.soundhelix.com/examples/mp3/SoundHelix-Song-11.mp3", duration: "4:10" },
+                { id: 1312, albumId: 13, title: "Children", artist: "Justin Bieber", url: "https://www.soundhelix.com/examples/mp3/SoundHelix-Song-12.mp3", duration: "3:43" },
+                { id: 1313, albumId: 13, title: "Purpose", artist: "Justin Bieber", url: "https://www.soundhelix.com/examples/mp3/SoundHelix-Song-13.mp3", duration: "3:30" },
+
+                /* Graduation - Full list */
+                { id: 3501, albumId: 35, title: "Good Morning", artist: "Kanye West", url: "/music/kanye west/Kanye West - Graduation  (Full Album) (Explicit)/Good Morning (1080p_25fps_H264-128kbit_AAC).mp4", duration: "3:15" },
+                { id: 3502, albumId: 35, title: "Champion", artist: "Kanye West", url: "/music/kanye west/Kanye West - Graduation  (Full Album) (Explicit)/Champion (1080p_25fps_H264-128kbit_AAC).mp4", duration: "2:47" },
+                { id: 3503, albumId: 35, title: "Stronger", artist: "Kanye West", url: "/music/kanye west/Kanye West - Graduation  (Full Album) (Explicit)/Stronger (1080p_25fps_H264-128kbit_AAC).mp4", duration: "5:11" },
+                { id: 3504, albumId: 35, title: "I Wonder", artist: "Kanye West", url: "/music/kanye west/Kanye West - Graduation  (Full Album) (Explicit)/I Wonder (1080p_25fps_H264-128kbit_AAC).mp4", duration: "4:03" },
+                { id: 3505, albumId: 35, title: "Good Life", artist: "Kanye West", url: "/music/kanye west/Kanye West - Graduation  (Full Album) (Explicit)/Good Life (1080p_25fps_H264-128kbit_AAC).mp4", duration: "3:27" },
+                { id: 3506, albumId: 35, title: "Can't Tell Me Nothing", artist: "Kanye West", url: "/music/kanye west/Kanye West - Graduation  (Full Album) (Explicit)/Can't Tell Me Nothing (1080p_25fps_H264-128kbit_AAC).mp4", duration: "4:31" },
+                { id: 3507, albumId: 35, title: "Barry Bonds", artist: "Kanye West", url: "/music/kanye west/Kanye West - Graduation  (Full Album) (Explicit)/Barry Bonds (1080p_25fps_H264-128kbit_AAC).mp4", duration: "3:24" },
+                { id: 3508, albumId: 35, title: "Flashing Lights", artist: "Kanye West", url: "/music/kanye west/Kanye West - Graduation  (Full Album) (Explicit)/Flashing Lights (1080p_25fps_H264-128kbit_AAC).mp4", duration: "3:57" },
+                { id: 3509, albumId: 35, title: "Everything I Am", artist: "Kanye West", url: "/music/kanye west/Kanye West - Graduation  (Full Album) (Explicit)/Everything I Am (1080p_25fps_H264-128kbit_AAC).mp4", duration: "3:47" },
+                { id: 3510, albumId: 35, title: "The Glory", artist: "Kanye West", url: "/music/kanye west/Kanye West - Graduation  (Full Album) (Explicit)/The Glory (1080p_25fps_H264-128kbit_AAC).mp4", duration: "3:32" },
+                { id: 3511, albumId: 35, title: "Homecoming", artist: "Kanye West", url: "/music/kanye west/Kanye West - Graduation  (Full Album) (Explicit)/Homecoming (1080p_25fps_H264-128kbit_AAC).mp4", duration: "3:23" },
+                { id: 3512, albumId: 35, title: "Big Brother", artist: "Kanye West", url: "/music/kanye west/Kanye West - Graduation  (Full Album) (Explicit)/Big Brother (1080p_25fps_H264-128kbit_AAC).mp4", duration: "4:47" },
+                { id: 3513, albumId: 35, title: "Good Night / Bittersweet Poetry (Bônus)", artist: "Kanye West", url: "/music/kanye west/Kanye West - Graduation  (Full Album) (Explicit)/Good Night (1080p_25fps_H264-128kbit_AAC).mp4", duration: "3:06" },
+
+                /* 808s & Heartbreak - Full list */
+                { id: 3601, albumId: 36, title: "Say You Will", artist: "Kanye West", url: "https://www.soundhelix.com/examples/mp3/SoundHelix-Song-1.mp3", duration: "6:17" },
+                { id: 3602, albumId: 36, title: "Welcome to Heartbreak", artist: "Kanye West", url: "https://www.soundhelix.com/examples/mp3/SoundHelix-Song-2.mp3", duration: "4:23" },
+                { id: 3603, albumId: 36, title: "Heartless", artist: "Kanye West", url: "https://www.soundhelix.com/examples/mp3/SoundHelix-Song-3.mp3", duration: "3:31" },
+                { id: 3604, albumId: 36, title: "Amazing", artist: "Kanye West", url: "https://www.soundhelix.com/examples/mp3/SoundHelix-Song-4.mp3", duration: "3:58" },
+                { id: 3605, albumId: 36, title: "Love Lockdown", artist: "Kanye West", url: "https://www.soundhelix.com/examples/mp3/SoundHelix-Song-5.mp3", duration: "4:30" },
+                { id: 3606, albumId: 36, title: "Paranoid", artist: "Kanye West", url: "https://www.soundhelix.com/examples/mp3/SoundHelix-Song-6.mp3", duration: "4:37" },
+                { id: 3607, albumId: 36, title: "RoboCop", artist: "Kanye West", url: "https://www.soundhelix.com/examples/mp3/SoundHelix-Song-7.mp3", duration: "4:34" },
+                { id: 3608, albumId: 36, title: "Street Lights", artist: "Kanye West", url: "https://www.soundhelix.com/examples/mp3/SoundHelix-Song-8.mp3", duration: "3:10" },
+                { id: 3609, albumId: 36, title: "Bad News", artist: "Kanye West", url: "https://www.soundhelix.com/examples/mp3/SoundHelix-Song-9.mp3", duration: "3:58" },
+                { id: 3610, albumId: 36, title: "See You In My Nightmares", artist: "Kanye West", url: "https://www.soundhelix.com/examples/mp3/SoundHelix-Song-10.mp3", duration: "4:18" },
+                { id: 3611, albumId: 36, title: "Coldest Winter", artist: "Kanye West", url: "https://www.soundhelix.com/examples/mp3/SoundHelix-Song-11.mp3", duration: "2:44" },
+                { id: 3612, albumId: 36, title: "Pinocchio Story", artist: "Kanye West", url: "https://www.soundhelix.com/examples/mp3/SoundHelix-Song-12.mp3", duration: "6:02" },
+
+                /* My Beautiful Dark Twisted Fantasy - Full list */
+                { id: 3701, albumId: 37, title: "Dark Fantasy", artist: "Kanye West", url: "https://www.soundhelix.com/examples/mp3/SoundHelix-Song-1.mp3", duration: "4:40" },
+                { id: 3702, albumId: 37, title: "Gorgeous", artist: "Kanye West", url: "https://www.soundhelix.com/examples/mp3/SoundHelix-Song-2.mp3", duration: "5:57" },
+                { id: 3703, albumId: 37, title: "POWER", artist: "Kanye West", url: "https://www.soundhelix.com/examples/mp3/SoundHelix-Song-3.mp3", duration: "4:52" },
+                { id: 3704, albumId: 37, title: "All of the Lights (Interlude)", artist: "Kanye West", url: "https://www.soundhelix.com/examples/mp3/SoundHelix-Song-4.mp3", duration: "1:02" },
+                { id: 3705, albumId: 37, title: "All of the Lights", artist: "Kanye West", url: "https://www.soundhelix.com/examples/mp3/SoundHelix-Song-5.mp3", duration: "4:59" },
+                { id: 3706, albumId: 37, title: "Monster", artist: "Kanye West", url: "https://www.soundhelix.com/examples/mp3/SoundHelix-Song-6.mp3", duration: "6:18" },
+                { id: 3707, albumId: 37, title: "So Appalled", artist: "Kanye West", url: "https://www.soundhelix.com/examples/mp3/SoundHelix-Song-7.mp3", duration: "6:38" },
+                { id: 3708, albumId: 37, title: "Devil in a New Dress", artist: "Kanye West", url: "https://www.soundhelix.com/examples/mp3/SoundHelix-Song-8.mp3", duration: "5:52" },
+                { id: 3709, albumId: 37, title: "Runaway", artist: "Kanye West", url: "https://www.soundhelix.com/examples/mp3/SoundHelix-Song-9.mp3", duration: "9:08" },
+                { id: 3710, albumId: 37, title: "Hell of a Life", artist: "Kanye West", url: "https://www.soundhelix.com/examples/mp3/SoundHelix-Song-10.mp3", duration: "5:27" },
+                { id: 3711, albumId: 37, title: "Blame Game", artist: "Kanye West", url: "https://www.soundhelix.com/examples/mp3/SoundHelix-Song-11.mp3", duration: "7:49" },
+                { id: 3712, albumId: 37, title: "Lost in the World", artist: "Kanye West", url: "https://www.soundhelix.com/examples/mp3/SoundHelix-Song-12.mp3", duration: "4:16" },
+                { id: 3713, albumId: 37, title: "Who Will Survive in America", artist: "Kanye West", url: "https://www.soundhelix.com/examples/mp3/SoundHelix-Song-13.mp3", duration: "1:38" },
+
+                /* Watch The Throne - Full list */
+                { id: 3801, albumId: 38, title: "No Church in the Wild", artist: "Kanye West & Jay-Z", url: "https://www.soundhelix.com/examples/mp3/SoundHelix-Song-1.mp3", duration: "4:32" },
+                { id: 3802, albumId: 38, title: "Lift Off", artist: "Kanye West & Jay-Z", url: "https://www.soundhelix.com/examples/mp3/SoundHelix-Song-2.mp3", duration: "4:26" },
+                { id: 3803, albumId: 38, title: "Niggas in Paris", artist: "Kanye West & Jay-Z", url: "https://www.soundhelix.com/examples/mp3/SoundHelix-Song-3.mp3", duration: "3:39" },
+                { id: 3804, albumId: 38, title: "Otis", artist: "Kanye West & Jay-Z", url: "https://www.soundhelix.com/examples/mp3/SoundHelix-Song-4.mp3", duration: "2:58" },
+                { id: 3805, albumId: 38, title: "Gotta Have It", artist: "Kanye West & Jay-Z", url: "https://www.soundhelix.com/examples/mp3/SoundHelix-Song-5.mp3", duration: "2:20" },
+                { id: 3806, albumId: 38, title: "New Day", artist: "Kanye West & Jay-Z", url: "https://www.soundhelix.com/examples/mp3/SoundHelix-Song-6.mp3", duration: "4:32" },
+                { id: 3807, albumId: 38, title: "That’s My Bitch", artist: "Kanye West & Jay-Z", url: "https://www.soundhelix.com/examples/mp3/SoundHelix-Song-7.mp3", duration: "3:22" },
+                { id: 3808, albumId: 38, title: "Welcome to the Jungle", artist: "Kanye West & Jay-Z", url: "https://www.soundhelix.com/examples/mp3/SoundHelix-Song-8.mp3", duration: "2:54" },
+                { id: 3809, albumId: 38, title: "Who Gon Stop Me", artist: "Kanye West & Jay-Z", url: "https://www.soundhelix.com/examples/mp3/SoundHelix-Song-9.mp3", duration: "4:16" },
+                { id: 3810, albumId: 38, title: "Murder to Excellence", artist: "Kanye West & Jay-Z", url: "https://www.soundhelix.com/examples/mp3/SoundHelix-Song-10.mp3", duration: "5:00" },
+                { id: 3811, albumId: 38, title: "Made in America", artist: "Kanye West & Jay-Z", url: "https://www.soundhelix.com/examples/mp3/SoundHelix-Song-11.mp3", duration: "4:52" },
+                { id: 3812, albumId: 38, title: "Why I Love You", artist: "Kanye West & Jay-Z", url: "https://www.soundhelix.com/examples/mp3/SoundHelix-Song-12.mp3", duration: "3:21" },
+
+                /* Beauty Behind the Madness - Full list */
+                { id: 301, albumId: 3, title: "Real Life", artist: "The Weeknd", url: "/music/the weeknd/The Weeknd - Beauty Behind The Madness (Full Album)/Real Life (1080p_25fps_H264-128kbit_AAC).mp4", duration: "3:43" },
+                { id: 302, albumId: 3, title: "Losers", artist: "The Weeknd", url: "/music/the weeknd/The Weeknd - Beauty Behind The Madness (Full Album)/Losers (1080p_25fps_H264-128kbit_AAC).mp4", duration: "4:41" },
+                { id: 303, albumId: 3, title: "Tell Your Friends", artist: "The Weeknd", url: "/music/the weeknd/The Weeknd - Beauty Behind The Madness (Full Album)/Tell Your Friends (1080p_25fps_H264-128kbit_AAC).mp4", duration: "5:34" },
+                { id: 304, albumId: 3, title: "Often", artist: "The Weeknd", url: "/music/the weeknd/The Weeknd - Beauty Behind The Madness (Full Album)/Often (1080p_25fps_H264-128kbit_AAC).mp4", duration: "4:09" },
+                { id: 305, albumId: 3, title: "The Hills", artist: "The Weeknd", url: "/music/the weeknd/The Weeknd - Beauty Behind The Madness (Full Album)/The Hills (1080p_25fps_H264-128kbit_AAC).mp4", duration: "4:02" },
+                { id: 306, albumId: 3, title: "Acquainted", artist: "The Weeknd", url: "/music/the weeknd/The Weeknd - Beauty Behind The Madness (Full Album)/Acquainted (1080p_25fps_H264-128kbit_AAC).mp4", duration: "5:48" },
+                { id: 307, albumId: 3, title: "Can't Feel My Face", artist: "The Weeknd", url: "/music/the weeknd/The Weeknd - Beauty Behind The Madness (Full Album)/Can't Feel My Face (1080p_25fps_H264-128kbit_AAC).mp4", duration: "3:33" },
+                { id: 308, albumId: 3, title: "Shameless", artist: "The Weeknd", url: "/music/the weeknd/The Weeknd - Beauty Behind The Madness (Full Album)/Shameless (1080p_25fps_H264-128kbit_AAC).mp4", duration: "4:13" },
+                { id: 309, albumId: 3, title: "Earned It", artist: "The Weeknd", url: "https://www.soundhelix.com/examples/mp3/SoundHelix-Song-9.mp3", duration: "4:37" },
+                { id: 310, albumId: 3, title: "In the Night", artist: "The Weeknd", url: "/music/the weeknd/The Weeknd - Beauty Behind The Madness (Full Album)/In The Night (1080p_25fps_H264-128kbit_AAC).mp4", duration: "3:55" },
+                { id: 311, albumId: 3, title: "As You Are", artist: "The Weeknd", url: "/music/the weeknd/The Weeknd - Beauty Behind The Madness (Full Album)/As You Are (1080p_25fps_H264-128kbit_AAC).mp4", duration: "5:40" },
+                { id: 312, albumId: 3, title: "Dark Times (feat. Ed Sheeran)", artist: "The Weeknd", url: "https://www.soundhelix.com/examples/mp3/SoundHelix-Song-12.mp3", duration: "4:20" },
+                { id: 313, albumId: 3, title: "Prisoner (feat. Lana Del Rey)", artist: "The Weeknd", url: "/music/the weeknd/The Weeknd - Beauty Behind The Madness (Full Album)/Prisoner (1080p_25fps_H264-128kbit_AAC).mp4", duration: "4:47" },
+                { id: 314, albumId: 3, title: "Angel", artist: "The Weeknd", url: "/music/the weeknd/The Weeknd - Beauty Behind The Madness (Full Album)/Angel (1080p_25fps_H264-128kbit_AAC).mp4", duration: "6:17" }
+            ],
+            categories: ["Pop", "Hip Hop", "Rock", "Indie", "Eletrônica", "Jazz", "Foco", "Relax", "Treino"]
+        };
+
+        const LYRICS_MOCK = [
+            { original: "I said, ooh, I'm blinded by the lights", translation: "Eu disse, ooh, estou cego pelas luzes" },
+            { original: "No, I can't sleep until I feel your touch", translation: "Não, eu não consigo dormir até sentir o seu toque" },
+            { original: "I said, ooh, I'm drowning in the night", translation: "Eu disse, ooh, estou me afogando na noite" },
+            { original: "Oh, when I'm like this, you're the one I trust", translation: "Oh, quando estou assim, você é em quem eu confio" },
+            { original: "I'm running out of time", translation: "Estou ficando sem tempo" },
+            { original: "Cause I can see the sun light up the sky", translation: "Porque posso ver o sol iluminar o céu" },
+            { original: "So I hit the road in overdrive, baby", translation: "Então eu pego a estrada em alta velocidade, baby" },
+            { original: "The city's cold and empty", translation: "A cidade está fria e vazia" },
+            { original: "No one's around to judge me", translation: "Não há ninguém por perto para me julgar" },
+            { original: "I can't see clearly when you're gone", translation: "Não consigo ver claramente quando você se vai" }
+        ];
+
+        const savedLikedSongs = JSON.parse(localStorage.getItem('redbeat_liked_songs') || '[]');
+        const savedPlaylists = JSON.parse(localStorage.getItem('redbeat_playlists') || '[]');
+
+        const state = {
+            view: 'home',
+            history: ['home'],
+            currentTrack: null,
+            isPlaying: false,
+            shuffle: false,
+            repeatMode: 'off',
+            likedSongs: savedLikedSongs,
+            playlists: savedPlaylists,
+            isMuted: false,
+            lastVolume: 0.8,
+            songToPlaylist: null,
+            activePlaylistId: null,
+            showTranslation: false,
+            isQueueOpen: false,
+            isRenaming: false,
+            currentContext: [] 
+        };
+
+        const audio = document.getElementById('audio-player');
+        const mainScroll = document.getElementById('main-scroller');
+        const sidebar = document.getElementById('app-sidebar');
+        const searchInput = document.getElementById('search-input');
+        const searchPreview = document.getElementById('search-preview');
+        let playPromise = null;
+
+        function init() {
+            renderHome();
+            renderCategories();
+            setupControls();
+            setupGestures();
+            lucide.createIcons();
+            updateAllLikeIcons();
+            updateRepeatUI();
+            renderPlaylistsInSidebar();
+            audio.volume = state.lastVolume;
+
+            document.addEventListener('click', (e) => {
+                if (!searchInput.contains(e.target) && !searchPreview.contains(e.target)) {
+                    hideSearchPreview();
+                }
+            });
+        }
+
+        function toggleMobileMenu() { sidebar.classList.toggle('open'); }
+        function closeMobileMenu() { sidebar.classList.remove('open'); }
+        
+        function hideSearchPreview() {
+            searchPreview.style.display = 'none';
+        }
+
+        function updateSearchPreview(q) {
+            if (!q || q.trim() === '') {
+                hideSearchPreview();
+                return;
+            }
+
+            const term = q.toLowerCase();
+            const filteredArtists = DATABASE.artists.filter(a => a.name.toLowerCase().includes(term)).slice(0, 3);
+            const filteredAlbums = DATABASE.albums.filter(a => a.title.toLowerCase().includes(term)).slice(0, 3);
+            const filteredSongs = DATABASE.songs.filter(s => s.title.toLowerCase().includes(term) || s.artist.toLowerCase().includes(term)).slice(0, 5);
+
+            if (filteredArtists.length === 0 && filteredAlbums.length === 0 && filteredSongs.length === 0) {
+                searchPreview.innerHTML = '<div style="padding:16px; color:var(--text-dim); font-size:0.85rem; text-align:center;">Nenhum resultado rápido encontrado</div>';
+                searchPreview.style.display = 'block';
+                return;
+            }
+
+            let html = '';
+
+            // SECTION 1: ARTISTS (Reordered to be top)
+            if (filteredArtists.length > 0) {
+                html += `<div class="search-preview-section"><h4>Artistas</h4>` + 
+                    filteredArtists.map(art => `
+                    <div class="preview-item" onclick="switchView('artist', ${art.id}); hideSearchPreview();">
+                        <img src="${art.img}" class="preview-thumb artist">
+                        <div class="preview-info">
+                            <div class="preview-title">${art.name}</div>
+                            <div class="preview-subtitle">Artista</div>
+                        </div>
+                    </div>`).join('') + `</div>`;
+            }
+
+            // SECTION 2: SONGS
+            if (filteredSongs.length > 0) {
+                html += `<div class="search-preview-section"><h4>Músicas</h4>` + 
+                    filteredSongs.map(s => {
+                        const alb = DATABASE.albums.find(a => a.id === s.albumId);
+                        return `
+                        <div class="preview-item" onclick="playSong(${s.id}); hideSearchPreview();">
+                            <img src="${alb?.cover || ''}" class="preview-thumb">
+                            <div class="preview-info">
+                                <div class="preview-title">${s.title}</div>
+                                <div class="preview-subtitle">${s.artist}</div>
+                            </div>
+                        </div>`;
+                    }).join('') + `</div>`;
+            }
+
+            // SECTION 3: ALBUMS
+            if (filteredAlbums.length > 0) {
+                html += `<div class="search-preview-section"><h4>Álbuns</h4>` + 
+                    filteredAlbums.map(alb => `
+                    <div class="preview-item" onclick="switchView('album', ${alb.id}); hideSearchPreview();">
+                        <img src="${alb.cover}" class="preview-thumb">
+                        <div class="preview-info">
+                            <div class="preview-title">${alb.title}</div>
+                            <div class="preview-subtitle">${DATABASE.artists.find(a => a.id === alb.artistId)?.name}</div>
+                        </div>
+                    </div>`).join('') + `</div>`;
+            }
+
+            searchPreview.innerHTML = html;
+            searchPreview.style.display = 'block';
+        }
+
+        function toggleMute() { 
+            state.isMuted = !state.isMuted; 
+            audio.muted = state.isMuted; 
+            updateVolumeUI(); 
+            const volFill = document.querySelectorAll('#volume-fill');
+            volFill.forEach(fill => fill.style.width = state.isMuted ? '0%' : (state.lastVolume * 100) + '%');
+        }
+
+        function updateVolumeUI() {
+            const muteBtns = document.querySelectorAll('#player-mute-btn');
+            muteBtns.forEach(btn => {
+                btn.innerHTML = `<i data-lucide="${state.isMuted ? 'volume-x' : 'volume-2'}" size="18"></i>`;
+            });
+            lucide.createIcons();
+        }
+
+        function switchView(view, data = null) {
+            state.view = view;
+            state.isRenaming = false; 
+            if (state.history[state.history.length - 1] !== view) state.history.push(view);
+            
+            document.querySelectorAll('.view-section').forEach(v => v.classList.remove('active'));
+            document.querySelectorAll('.nav-item').forEach(i => i.classList.remove('active'));
+            document.querySelectorAll('.mobile-nav > div').forEach(i => i.classList.remove('active'));
+
+            const activeView = document.getElementById(`view-${view}`);
+            if (activeView) activeView.classList.add('active');
+            
+            // Handle static side items
+            const sideItem = document.getElementById(`nav-${view}-side`);
+            if (sideItem) sideItem.classList.add('active');
+            
+            // Handle dynamic playlist side items
+            if (view === 'playlist' && data) {
+                const plItem = document.getElementById(`nav-playlist-${data}`);
+                if (plItem) plItem.classList.add('active');
+            }
+            
+            const mobItem = document.getElementById(`mob-${view}`);
+            if (mobItem) mobItem.classList.add('active');
+
+            if (view === 'album' && data) renderAlbum(data);
+            if (view === 'artist' && data) renderArtist(data);
+            if (view === 'liked') renderLikedSongs();
+            if (view === 'playlist' && data) renderPlaylist(view, data);
+            if (view === 'search') handleSearch(searchInput.value);
+
+            const mainScroll = document.getElementById('main-scroller');
+            if (mainScroll) mainScroll.scrollTop = 0;
+            lucide.createIcons();
+            updateAllLikeIcons();
+        }
+
+        function toggleQueue(event) {
+            if (event) event.stopPropagation();
+            state.isQueueOpen = !state.isQueueOpen;
+            const container = document.getElementById('main-app-container');
+            const queueSidebar = document.getElementById('queue-sidebar');
+            
+            if (state.isQueueOpen) {
+                container.classList.add('queue-open');
+                queueSidebar.style.display = 'flex';
+                renderQueue();
+            } else {
+                container.classList.remove('queue-open');
+                queueSidebar.style.display = 'none';
+            }
+            lucide.createIcons();
+        }
+
+        function renderQueue() {
+            const nowPlayingContainer = document.getElementById('queue-now-playing');
+            const nextUpContainer = document.getElementById('queue-next-up');
+
+            if (!state.currentTrack) {
+                nowPlayingContainer.innerHTML = '<p style="color:var(--text-dim); font-size:0.85rem;">Nada tocando no momento</p>';
+                nowPlayingContainer.style.padding = '12px';
+                nextUpContainer.innerHTML = '';
+                return;
+            }
+
+            const alb = DATABASE.albums.find(a => a.id === state.currentTrack.albumId);
+            nowPlayingContainer.innerHTML = `
+                <div class="queue-item active">
+                    <img src="${alb ? alb.cover : 'https://picsum.photos/seed/placeholder/100'}" class="queue-item-img">
+                    <div class="queue-item-info">
+                        <p class="queue-item-title">${state.currentTrack.title}</p>
+                        <p class="queue-item-artist">${state.currentTrack.artist}</p>
+                    </div>
+                </div>
+            `;
+
+            const source = (state.currentContext && state.currentContext.length > 0) ? state.currentContext : DATABASE.songs;
+            const currentIdx = source.findIndex(s => s.id === state.currentTrack.id);
+            const nextSongs = source.slice(currentIdx + 1, currentIdx + 6);
+
+            if (nextSongs.length === 0) {
+                nextUpContainer.innerHTML = '<p style="color:var(--text-dim); font-size:0.85rem; padding: 12px;">Sua fila está vazia</p>';
+            } else {
+                nextUpContainer.innerHTML = nextSongs.map(s => {
+                    const sAlb = DATABASE.albums.find(a => a.id === s.albumId);
+                    return `
+                        <div class="queue-item" onclick="playSong(${s.id})">
+                            <img src="${sAlb ? sAlb.cover : 'https://picsum.photos/seed/placeholder/100'}" class="queue-item-img">
+                            <div class="queue-item-info">
+                                <p class="queue-item-title">${s.title}</p>
+                                <p class="queue-item-artist">${s.artist}</p>
+                            </div>
+                        </div>
+                    `;
+                }).join('');
+            }
+        }
+
+        function openLyrics() {
+            const lyricsView = document.getElementById('view-lyrics');
+            lyricsView.classList.add('active');
+            renderLyrics();
+            lucide.createIcons();
+        }
+
+        function closeLyrics() {
+            const lyricsView = document.getElementById('view-lyrics');
+            lyricsView.classList.remove('active');
+        }
+
+        function renderLyrics() {
+            const list = document.getElementById('lyrics-list');
+            list.innerHTML = LYRICS_MOCK.map((line, i) => `
+                <div class="lyric-line ${i === 2 ? 'active' : ''}">
+                    ${state.showTranslation ? line.translation : line.original}
+                </div>
+            `).join('');
+        }
+
+        function toggleTranslation() {
+            state.showTranslation = !state.showTranslation;
+            const btn = document.getElementById('btn-translate');
+            btn.classList.toggle('active', state.showTranslation);
+            renderLyrics();
+        }
+
+        function navigateToCurrentAlbum() {
+            if (state.currentTrack && state.currentTrack.albumId) {
+                switchView('album', state.currentTrack.albumId);
+            }
+        }
+
+        function openPlaylistModal(songId, event) {
+            if (event) event.stopPropagation();
+            state.songToPlaylist = songId || null;
+            document.getElementById('playlist-modal').style.display = 'flex';
+            renderModalPlaylists();
+        }
+
+        function closePlaylistModal() { document.getElementById('playlist-modal').style.display = 'none'; }
+
+        function renderModalPlaylists() {
+            const list = document.getElementById('modal-playlist-list');
+            if (state.playlists.length === 0) {
+                list.innerHTML = '<p style="color:var(--text-dim); text-align:center;">Nenhuma playlist criada.</p>';
+            } else {
+                list.innerHTML = state.playlists.map(pl => `
+                    <div class="playlist-option" onclick="handlePlaylistModalClick(${pl.id})">
+                        <i data-lucide="list-plus"></i> <span>${pl.name}</span>
+                        ${state.songToPlaylist && pl.songs.includes(state.songToPlaylist) ? '<i data-lucide="check" size="14" style="margin-left:auto; color:var(--primary)"></i>' : ''}
+                    </div>
+                `).join('');
+                lucide.createIcons();
+            }
+        }
+
+        function createNewPlaylist() {
+            const input = document.getElementById('new-playlist-name');
+            const name = input.value.trim();
+            if (!name) return;
+            const newPL = { id: Date.now(), name: name, songs: [] };
+            state.playlists.push(newPL);
+            localStorage.setItem('redbeat_playlists', JSON.stringify(state.playlists));
+            input.value = '';
+            renderModalPlaylists();
+            renderPlaylistsInSidebar();
+        }
+
+        function handlePlaylistModalClick(playlistId) {
+            const pl = state.playlists.find(p => p.id === playlistId);
+            if (!pl) return;
+
+            // Add song if selected
+            if (state.songToPlaylist) {
+                if (!pl.songs.includes(state.songToPlaylist)) {
+                    pl.songs.push(state.songToPlaylist);
+                    localStorage.setItem('redbeat_playlists', JSON.stringify(state.playlists));
+                }
+            }
+            
+            closePlaylistModal();
+            
+            // Navigate to playlist view
+            switchView('playlist', playlistId);
+        }
+
+        function showConfirmModal(title, body, onConfirm) {
+            document.getElementById('confirm-modal-title').innerText = title;
+            document.getElementById('confirm-modal-body').innerText = body;
+            const actionBtn = document.getElementById('confirm-modal-action-btn');
+            actionBtn.onclick = () => {
+                onConfirm();
+                hideConfirmModal();
+            };
+            document.getElementById('confirm-modal').style.display = 'flex';
+        }
+
+        function hideConfirmModal() {
+            document.getElementById('confirm-modal').style.display = 'none';
+        }
+
+        function deletePlaylist(id, event) {
+            if (event) event.stopPropagation();
+            const pl = state.playlists.find(p => p.id === id);
+            if (!pl) return;
+
+            showConfirmModal(
+                "Excluir Playlist",
+                `Tem certeza que deseja excluir a playlist "${pl.name}"? Esta ação não pode ser desfeita.`,
+                () => {
+                    state.playlists = state.playlists.filter(p => p.id !== id);
+                    localStorage.setItem('redbeat_playlists', JSON.stringify(state.playlists));
+                    renderPlaylistsInSidebar();
+                    if (state.activePlaylistId === id) {
+                        switchView('home');
+                    }
+                }
+            );
+        }
+
+        function renamePlaylist(id, event) {
+            if (event) event.stopPropagation();
+            state.isRenaming = true;
+            renderPlaylist('playlist', id);
+        }
+
+        function cancelRename() {
+            state.isRenaming = false;
+            renderPlaylist('playlist', state.activePlaylistId);
+        }
+
+        function saveRename(id) {
+            const input = document.getElementById('rename-field-input');
+            const newName = input.value.trim();
+            if (newName) {
+                const pl = state.playlists.find(p => p.id === id);
+                if (pl) {
+                    pl.name = newName;
+                    localStorage.setItem('redbeat_playlists', JSON.stringify(state.playlists));
+                    renderPlaylistsInSidebar();
+                }
+            }
+            state.isRenaming = false;
+            renderPlaylist('playlist', id);
+        }
+
+        function renderPlaylistsInSidebar() {
+            const container = document.getElementById('sidebar-playlists');
+            container.innerHTML = `<div class="nav-item" id="nav-liked-side" onclick="switchView('liked'); closeMobileMenu(); hideSearchPreview();"><i data-lucide="heart" style="color: red;"></i> Músicas Curtidas</div>` + 
+                state.playlists.map(pl => `<div class="nav-item" id="nav-playlist-${pl.id}" onclick="switchView('playlist', ${pl.id}); closeMobileMenu(); hideSearchPreview();"><i data-lucide="list-plus"></i> ${pl.name}</div>`).join('');
+            lucide.createIcons();
+        }
+
+        function renderPlaylist(v, playlistId) {
+            state.activePlaylistId = playlistId;
+            const pl = state.playlists.find(p => p.id === playlistId);
+            if (!pl) return;
+            const songs = DATABASE.songs.filter(s => pl.songs.includes(s.id));
+            const container = document.getElementById('playlist-view-container');
+
+            let heroContent = '';
+            if (state.isRenaming) {
+                heroContent = `
+                    <div class="rename-input-container">
+                        <input type="text" id="rename-field-input" class="rename-field" value="${pl.name}" autofocus>
+                        <div class="rename-actions">
+                            <button class="play-album-btn" onclick="saveRename(${pl.id})">Salvar</button>
+                            <button class="confirm-btn-secondary" style="border-radius: 500px; padding: 12px 24px; font-weight: 800;" onclick="cancelRename()">Cancelar</button>
+                        </div>
+                    </div>
+                `;
+            } else {
+                heroContent = `
+                    <h1>${pl.name}</h1>
+                    <p>${songs.length} músicas</p>
+                    <div class="hero-actions">
+                        <button class="circle-btn" onclick="renamePlaylist(${pl.id}, event)" title="Renomear"><i data-lucide="edit-3" size="18"></i></button>
+                        <button class="circle-btn" onclick="deletePlaylist(${pl.id}, event)" title="Excluir"><i data-lucide="trash-2" size="18"></i></button>
+                    </div>
+                `;
+            }
+
+            container.innerHTML = `
+                <div class="hero">
+                    <div class="hero-img" style="background:#222; display:flex; align-items:center; justify-content:center;"><i data-lucide="list-plus" size="100"></i></div>
+                    <div class="hero-info">
+                        ${heroContent}
+                    </div>
+                </div>
+                <div style="padding:24px 0;">
+                    <table class="songs-table">
+                        <tbody>` + 
+                songs.map((s, i) => `<tr class="song-row ${state.currentTrack?.id === s.id ? 'active' : ''}" data-song-id="${s.id}" onclick="playSong(${s.id})">
+                    <td width="50">${i+1}</td>
+                    <td><div class="song-title-text">${s.title}</div><div style="font-size:0.8rem; color:var(--text-dim)">${s.artist}</div></td>
+                    <td width="40"><button class="btn-icon btn-like-table" data-song-id="${s.id}" onclick="toggleLike(${s.id}, event)"><i data-lucide="heart" size="16"></i></button></td>
+                    <td width="40"><button class="btn-icon" onclick="openPlaylistModal(${s.id}, event)"><i data-lucide="list-plus" size="16"></i></button></td>
+                    <td width="80" align="right">${s.duration}</td>
+                </tr>`).join('') + 
+                `</tbody></table></div>`;
+            lucide.createIcons();
+            updateAllLikeIcons();
+
+            if (state.isRenaming) {
+                const input = document.getElementById('rename-field-input');
+                input.focus();
+                input.onkeydown = (e) => {
+                    if (e.key === 'Enter') saveRename(pl.id);
+                    if (e.key === 'Escape') cancelRename();
+                };
+            }
+        }
+
+        function handleSearch(q) {
+            const resultsArea = document.getElementById('search-results-area');
+            const defaultArea = document.getElementById('search-default-area');
+            if (!q || q.trim() === '') {
+                resultsArea.innerHTML = '';
+                defaultArea.style.display = 'block';
+                return;
+            }
+            defaultArea.style.display = 'none';
+            const term = q.toLowerCase();
+            const filteredArtists = DATABASE.artists.filter(a => a.name.toLowerCase().includes(term));
+            const filteredAlbums = DATABASE.albums.filter(a => a.title.toLowerCase().includes(term));
+            const filteredSongs = DATABASE.songs.filter(s => s.title.toLowerCase().includes(term) || s.artist.toLowerCase().includes(term));
+
+            let html = '';
+            if (filteredSongs.length > 0) {
+                html += `<div class="search-results-section"><h2 class="shelf-title" style="font-size:1.2rem; margin-top:20px;">Músicas</h2><table class="songs-table"><tbody>` +
+                    filteredSongs.map(s => `<tr class="song-row ${state.currentTrack?.id === s.id ? 'active' : ''}" data-song-id="${s.id}" onclick="playSong(${s.id})">
+                        <td width="50"><img src="${DATABASE.albums.find(a => a.id === s.albumId)?.cover}" style="width: 40px; height: 40px; border-radius: 4px;"></td>
+                        <td><div class="song-title-text">${s.title}</div><div style="font-size:0.8rem; color:var(--text-dim)">${s.artist}</div></td>
+                        <td width="40"><button class="btn-icon btn-like-table" data-song-id="${s.id}" onclick="toggleLike(${s.id}, event)"><i data-lucide="heart" size="16"></i></button></td>
+                        <td width="40"><button class="btn-icon" onclick="openPlaylistModal(${s.id}, event)"><i data-lucide="list-plus" size="16"></i></button></td>
+                        <td width="80" align="right">${s.duration}</td>
+                    </tr>`).join('') + `</tbody></table></div>`;
+            }
+            if (filteredArtists.length > 0) {
+                html += `<div class="search-results-section"><h2 class="shelf-title" style="font-size:1.2rem; margin-top:20px;">Artistas</h2><div class="grid">` +
+                    filteredArtists.map(art => `<div class="card" onclick="switchView('artist', ${art.id})"><img src="${art.img}" class="card-img artist-img"><h3 class="card-title">${art.name}</h3><p class="card-subtitle">Artista</p></div>`).join('') + `</div></div>`;
+            }
+            if (filteredAlbums.length > 0) {
+                html += `<div class="search-results-section"><h2 class="shelf-title" style="font-size:1.2rem; margin-top:20px;">Álbuns</h2><div class="grid">` +
+                    filteredAlbums.map(alb => `<div class="card" onclick="switchView('album', ${alb.id})"><img src="${alb.cover}" class="card-img"><h3 class="card-title">${alb.title}</h3><p class="card-subtitle">${DATABASE.artists.find(a => a.id === alb.artistId)?.name}</p></div>`).join('') + `</div></div>`;
+            }
+            resultsArea.innerHTML = html || `<p style="padding: 40px; text-align: center; color: var(--text-dim);">Nenhum resultado encontrado para "${q}"</p>`;
+            lucide.createIcons();
+        }
+
+        function renderHome() {
+            const artistGrid = document.getElementById('home-artists-grid');
+            const albumGrid = document.getElementById('home-albums-grid');
+            artistGrid.innerHTML = DATABASE.artists.map(art => `<div class="card" onclick="switchView('artist', ${art.id})"><img src="${art.img}" class="card-img artist-img"><div class="play-overlay"><i data-lucide="play" fill="white"></i></div><h3 class="card-title">${art.name}</h3><p class="card-subtitle">Artista</p></div>`).join('');
+            albumGrid.innerHTML = DATABASE.albums.map(alb => `<div class="card" onclick="switchView('album', ${alb.id})"><img src="${alb.cover}" class="card-img"><div class="play-overlay"><i data-lucide="play" fill="white"></i></div><h3 class="card-title">${alb.title}</h3><p class="card-subtitle">${alb.year}</p></div>`).join('');
+            lucide.createIcons();
+        }
+
+        function renderAlbum(id) {
+            const alb = DATABASE.albums.find(a => a.id === id);
+            const songs = DATABASE.songs.filter(s => s.albumId === id);
+            const container = document.getElementById('album-container');
+            container.innerHTML = `<div class="hero">
+                <img src="${alb.cover}" class="hero-img">
+                <div class="hero-info">
+                    <h1>${alb.title}</h1>
+                    <p>${alb.year} • ${songs.length} músicas</p>
+                    <div class="hero-actions">
+                        <button class="play-album-btn" onclick="playAlbum(${alb.id})">
+                            <i data-lucide="play" fill="currentColor"></i>
+                            Tocar Álbum
+                        </button>
+                    </div>
+                </div>
+            </div>
+            <div style="padding:16px 0;">
+                <table class="songs-table">
+                    <tbody>` + 
+                songs.map((s, i) => `<tr class="song-row ${state.currentTrack?.id === s.id ? 'active' : ''}" data-song-id="${s.id}" onclick="playSong(${s.id})">
+                    <td width="50">${i+1}</td>
+                    <td><div class="song-title-text">${s.title}</div></td>
+                    <td width="40"><button class="btn-icon btn-like-table" data-song-id="${s.id}" onclick="toggleLike(${s.id}, event)"><i data-lucide="heart" size="16"></i></button></td>
+                    <td width="40"><button class="btn-icon" onclick="openPlaylistModal(${s.id}, event)"><i data-lucide="list-plus" size="16"></i></button></td>
+                    <td width="80" align="right">${s.duration}</td>
+                </tr>`).join('') + `</tbody></table></div>`;
+            lucide.createIcons();
+            updateAllLikeIcons();
+        }
+
+        function startContextPlayback(songList) {
+            if (songList.length === 0) return;
+            state.currentContext = [...songList];
+            let firstSongId = state.shuffle ? songList[Math.floor(Math.random() * songList.length)].id : songList[0].id;
+            playSong(firstSongId);
+        }
+
+        function playAlbum(id) {
+            const songs = DATABASE.songs.filter(s => s.albumId === id);
+            startContextPlayback(songs);
+        }
+
+        function playLikedSongs() {
+            const liked = DATABASE.songs.filter(s => state.likedSongs.includes(s.id));
+            startContextPlayback(liked);
+        }
+
+        function renderArtist(id) {
+            const art = DATABASE.artists.find(a => a.id === id);
+            const albums = DATABASE.albums.filter(a => a.artistId === id);
+            const container = document.getElementById('artist-container');
+            container.innerHTML = `<div class="hero"><img src="${art.img}" class="hero-img artist-img"><div class="hero-info"><h1>${art.name}</h1></div></div><div class="shelf"><div class="grid">` + 
+                albums.map(alb => `<div class="card" onclick="switchView('album', ${alb.id})"><img src="${alb.cover}" class="card-img"><h3 class="card-title">${alb.title}</h3></div>`).join('') + `</div></div>`;
+            lucide.createIcons();
+        }
+
+        function renderLikedSongs() {
+            const liked = DATABASE.songs.filter(s => state.likedSongs.includes(s.id));
+            const container = document.getElementById('liked-songs-container');
+            container.innerHTML = `<div class="hero">
+                <div class="hero-img" style="background: linear-gradient(135deg, #450af5 0%, #c4efd9 100%); display:flex; align-items:center; justify-content:center;">
+                    <i data-lucide="heart" size="80" fill="white" color="white"></i>
+                </div>
+                <div class="hero-info">
+                    <h1>Músicas Curtidas</h1>
+                    <p>${liked.length} músicas</p>
+                    <div class="hero-actions">
+                        <button class="play-album-btn" onclick="playLikedSongs()">
+                            <i data-lucide="play" fill="currentColor"></i>
+                            Tocar Tudo
+                        </button>
+                    </div>
+                </div>
+            </div>
+            <div style="padding:24px 0;"><table class="songs-table"><tbody>` + 
+                liked.map((s, i) => `<tr class="song-row ${state.currentTrack?.id === s.id ? 'active' : ''}" data-song-id="${s.id}" onclick="playSong(${s.id})">
+                    <td width="50">${i+1}</td>
+                    <td><div class="song-title-text">${s.title}</div><div style="font-size:0.8rem; color:var(--text-dim)">${s.artist}</div></td>
+                    <td width="40"><button class="btn-icon btn-like-table" data-song-id="${s.id}" onclick="toggleLike(${s.id}, event)"><i data-lucide="heart" size="16"></i></button></td>
+                    <td width="40"><button class="btn-icon" onclick="openPlaylistModal(${s.id}, event)"><i data-lucide="list-plus" size="16"></i></button></td>
+                    <td width="80" align="right">${s.duration}</td>
+                </tr>`).join('') + `</tbody></table></div>`;
+            lucide.createIcons();
+            updateAllLikeIcons();
+        }
+
+        function renderCategories() {
+            const grid = document.getElementById('categories-grid');
+            grid.innerHTML = DATABASE.categories.map(c => `<div class="card" style="background:#333; height:150px; display:flex; align-items:center; justify-content:center;"><h3>${c}</h3></div>`).join('');
+        }
+
+        function toggleLike(id, event) {
+            if (event) event.stopPropagation();
+            if (!id) return;
+            const idx = state.likedSongs.indexOf(id);
+            if (idx > -1) state.likedSongs.splice(idx, 1);
+            else state.likedSongs.push(id);
+            localStorage.setItem('redbeat_liked_songs', JSON.stringify(state.likedSongs));
+            updateAllLikeIcons();
+        }
+
+        function updateAllLikeIcons() {
+            const playerBtns = document.querySelectorAll('#player-like-btn');
+            playerBtns.forEach(playerBtn => {
+                if (state.currentTrack && state.likedSongs.includes(state.currentTrack.id)) { 
+                    playerBtn.classList.add('liked'); 
+                    playerBtn.innerHTML = '<i data-lucide="heart" fill="red" size="18"></i>'; 
+                } else { 
+                    playerBtn.classList.remove('liked'); 
+                    playerBtn.innerHTML = '<i data-lucide="heart" size="18"></i>'; 
+                }
+            });
+
+            document.querySelectorAll('.btn-like-table').forEach(btn => {
+                const songId = parseInt(btn.getAttribute('data-song-id'));
+                if (state.likedSongs.includes(songId)) {
+                    btn.classList.add('liked');
+                    btn.innerHTML = '<i data-lucide="heart" fill="red" size="16"></i>';
+                } else {
+                    btn.classList.remove('liked');
+                    btn.innerHTML = '<i data-lucide="heart" size="16"></i>';
+                }
+            });
+            lucide.createIcons();
+        }
+
+        function updateRepeatUI() {
+            const btns = document.querySelectorAll('#ctrl-repeat');
+            btns.forEach(btn => {
+                if (state.repeatMode === 'off') {
+                    btn.classList.remove('control-btn-active');
+                    btn.innerHTML = '<i data-lucide="repeat" size="18"></i>';
+                } else if (state.repeatMode === 'all') {
+                    btn.classList.add('control-btn-active');
+                    btn.innerHTML = '<i data-lucide="repeat" size="18"></i>';
+                } else if (state.repeatMode === 'one') {
+                    btn.classList.add('control-btn-active');
+                    btn.innerHTML = '<i data-lucide="repeat-1" size="18"></i>';
+                }
+            });
+            lucide.createIcons();
+        }
+
+        async function playSong(id) {
+            const song = DATABASE.songs.find(s => s.id === id);
+            if (!song) return;
+            if (state.currentTrack && state.currentTrack.id === id) {
+                if (state.isPlaying) {
+                    audio.pause(); state.isPlaying = false; 
+                } else { 
+                    try { playPromise = audio.play(); await playPromise; state.isPlaying = true; 
+                    } catch(e) { if (e.name !== 'AbortError') console.error(e); }
+                }
+                updatePlayUI();
+                updateAllRowsActiveState();
+                return;
+            }
+            state.currentTrack = song;
+            audio.src = song.url;
+            
+            const artistObj = DATABASE.artists.find(a => a.name === song.artist);
+            const albumObj = DATABASE.albums.find(a => a.id === song.albumId);
+
+            document.querySelectorAll('#p-title').forEach(el => el.innerText = song.title);
+            document.querySelectorAll('#p-artist').forEach(el => {
+                el.innerText = song.artist;
+                el.onclick = (e) => { e.stopPropagation(); if (artistObj) switchView('artist', artistObj.id); };
+            });
+            document.querySelectorAll('#p-album').forEach(el => {
+                el.innerText = albumObj ? albumObj.title : 'Álbuns';
+                el.onclick = (e) => { e.stopPropagation(); if (albumObj) switchView('album', albumObj.id); };
+            });
+            document.querySelectorAll('#p-img').forEach(el => el.src = albumObj ? albumObj.cover : '');
+            
+            try {
+                playPromise = audio.play();
+                await playPromise;
+                state.isPlaying = true;
+                updatePlayUI();
+                updateAllRowsActiveState();
+            } catch (e) { if (e.name !== 'AbortError') console.error("Playback error:", e); }
+            updateAllLikeIcons();
+            if (state.isQueueOpen) renderQueue();
+        }
+
+        function updateAllRowsActiveState() {
+            document.querySelectorAll('.song-row').forEach(row => {
+                const songId = parseInt(row.getAttribute('data-song-id'));
+                if (state.currentTrack && songId === state.currentTrack.id) row.classList.add('active');
+                else row.classList.remove('active');
+            });
+        }
+
+        function updatePlayUI() {
+            const btns = document.querySelectorAll('#ctrl-play');
+            btns.forEach(btn => {
+                btn.innerHTML = `<i data-lucide="${state.isPlaying ? 'pause' : 'play'}" fill="white"></i>`;
+            });
+            lucide.createIcons();
+        }
+
+        function setupControls() {
+            document.querySelectorAll('#ctrl-play').forEach(btn => {
+                btn.addEventListener('click', async () => {
+                    if (!state.currentTrack) return;
+                    if (state.isPlaying) { audio.pause(); state.isPlaying = false; }
+                    else { try { await audio.play(); state.isPlaying = true; } catch(e){} }
+                    updatePlayUI();
+                    updateAllRowsActiveState();
+                });
+            });
+
+            document.querySelectorAll('#ctrl-next').forEach(btn => {
+                btn.addEventListener('click', () => {
+                    if (!state.currentTrack) return;
+                    const source = (state.currentContext && state.currentContext.length > 0) ? state.currentContext : DATABASE.songs;
+                    let nextIdx = state.shuffle ? Math.floor(Math.random() * source.length) : (source.findIndex(s => s.id === state.currentTrack.id) + 1) % source.length;
+                    playSong(source[nextIdx].id);
+                });
+            });
+
+            document.querySelectorAll('#ctrl-prev').forEach(btn => {
+                btn.addEventListener('click', () => {
+                    if (!state.currentTrack) return;
+                    const source = (state.currentContext && state.currentContext.length > 0) ? state.currentContext : DATABASE.songs;
+                    let prevIdx = state.shuffle ? Math.floor(Math.random() * source.length) : (source.findIndex(s => s.id === state.currentTrack.id) - 1 + source.length) % source.length;
+                    playSong(source[prevIdx].id);
+                });
+            });
+
+            document.querySelectorAll('#ctrl-shuffle').forEach(btn => {
+                btn.addEventListener('click', () => {
+                    state.shuffle = !state.shuffle;
+                    document.querySelectorAll('#ctrl-shuffle').forEach(b => b.classList.toggle('control-btn-active', state.shuffle));
+                });
+            });
+
+            document.querySelectorAll('#ctrl-repeat').forEach(btn => {
+                btn.addEventListener('click', () => {
+                    if (state.repeatMode === 'off') state.repeatMode = 'all';
+                    else if (state.repeatMode === 'all') state.repeatMode = 'one';
+                    else state.repeatMode = 'off';
+                    updateRepeatUI();
+                });
+            });
+
+            audio.addEventListener('ended', () => {
+                if (state.repeatMode === 'one') { audio.currentTime = 0; audio.play().catch(() => {}); }
+                else document.getElementById('ctrl-next').click();
+            });
+
+            audio.addEventListener('timeupdate', () => {
+                if (!isFinite(audio.duration)) return;
+                const p = (audio.currentTime / audio.duration) * 100 || 0;
+                document.querySelectorAll('#progress-fill').forEach(fill => fill.style.width = p + '%');
+                document.querySelectorAll('#time-cur').forEach(el => el.innerText = formatTime(audio.currentTime));
+                document.querySelectorAll('#time-dur').forEach(el => el.innerText = formatTime(audio.duration));
+            });
+
+            document.querySelectorAll('#progress-slider').forEach(slider => {
+                slider.addEventListener('click', (e) => {
+                    if (!isFinite(audio.duration)) return;
+                    const rect = slider.getBoundingClientRect();
+                    const pos = (e.clientX - rect.left) / rect.width;
+                    audio.currentTime = pos * audio.duration;
+                });
+            });
+
+            document.querySelectorAll('#volume-slider').forEach(slider => {
+                slider.addEventListener('click', (e) => {
+                    const rect = slider.getBoundingClientRect();
+                    const vol = Math.max(0, Math.min(1, (e.clientX - rect.left) / rect.width));
+                    audio.volume = vol; state.lastVolume = vol; 
+                    document.querySelectorAll('#volume-fill').forEach(fill => fill.style.width = (vol * 100) + '%');
+                    state.isMuted = (vol === 0); audio.muted = state.isMuted; updateVolumeUI();
+                });
+            });
+
+            searchInput.addEventListener('input', e => {
+                updateSearchPreview(e.target.value);
+                if (state.view === 'search') handleSearch(e.target.value);
+            });
+        }
+
+        function setupGestures() {
+            const playerBar = document.querySelector('.player-bar');
+            let touchStartX = 0;
+            let touchStartY = 0;
+            let touchEndX = 0;
+            let touchEndY = 0;
+            const threshold = 50;
+
+            playerBar.addEventListener('touchstart', (e) => {
+                touchStartX = e.changedTouches[0].screenX;
+                touchStartY = e.changedTouches[0].screenY;
+            }, { passive: true });
+
+            playerBar.addEventListener('touchend', (e) => {
+                touchEndX = e.changedTouches[0].screenX;
+                touchEndY = e.changedTouches[0].screenY;
+                handleGesture();
+            }, { passive: true });
+
+            function handleGesture() {
+                const diffX = touchEndX - touchStartX;
+                const diffY = touchEndY - touchStartY;
+
+                // Determine if horizontal or vertical swipe
+                if (Math.abs(diffX) > Math.abs(diffY)) {
+                    // Horizontal Swipe
+                    if (Math.abs(diffX) > threshold) {
+                        if (diffX > 0) {
+                            // Swipe Right -> Prev
+                            document.getElementById('ctrl-prev').click();
+                        } else {
+                            // Swipe Left -> Next
+                            document.getElementById('ctrl-next').click();
+                        }
+                    }
+                } else {
+                    // Vertical Swipe
+                    if (Math.abs(diffY) > threshold) {
+                        if (diffY > 0) {
+                            // Swipe Down -> Minimize
+                            if (window.innerWidth <= 768) {
+                                playerBar.classList.add('minimized');
+                            }
+                        } else {
+                            // Swipe Up -> Expand
+                            if (window.innerWidth <= 768) {
+                                playerBar.classList.remove('minimized');
+                            }
+                        }
+                    }
+                }
+            }
+        }
+
+        function formatTime(s) { if (isNaN(s) || !isFinite(s)) return "0:00"; const m = Math.floor(s/60); const sec = Math.floor(s%60); return `${m}:${sec < 10 ? '0' : ''}${sec}`; }
+        function goBack() { if (state.history.length > 1) { state.history.pop(); switchView(state.history[state.history.length-1]); } }
+        window.onload = init;
+    </script>
+<script type="module" src="/index.tsx"></script>
+</body>
+</html>
